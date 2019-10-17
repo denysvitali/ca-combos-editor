@@ -48,15 +48,15 @@ type ComboFile struct {
 
 type Entry interface {
 	Name() string
-	Combos() []Band
+	Bands() []Band
 }
 
 type UplinkEntry struct {
-	combos []Band
+	bands []Band
 }
 
-func (u* UplinkEntry) Combos() []Band {
-	return u.combos;
+func (u* UplinkEntry) Bands() []Band {
+	return u.bands;
 }
 
 func (u* UplinkEntry) Name() string {
@@ -64,11 +64,11 @@ func (u* UplinkEntry) Name() string {
 }
 
 type DownlinkEntry struct {
-	combos []Band
+	bands []Band
 }
 
-func (d* DownlinkEntry) Combos() []Band {
-	return d.combos;
+func (d* DownlinkEntry) Bands() []Band {
+	return d.bands;
 }
 
 func (d* DownlinkEntry) Name() string {
@@ -90,7 +90,7 @@ func (c *ComboEdit) Parse() ComboFile {
 	// Length Section
 	len := r.rb()
 	cf.Entries_Len = int(len)
-	Log.Info("This CA Combos files contains ", len, " Entries_Len")
+	Log.Info("This CA Bands files contains ", len, " Entries_Len")
 	r.expect(0x00)
 
 	for i:=0; i<cf.Entries_Len; i++ {
@@ -110,12 +110,12 @@ func (c *ComboEdit) parseEntry(r *MyReader) Entry {
 	case 137:
 		// DL
 		dlEntry := DownlinkEntry{}
-		dlEntry.combos =  parseCombos(r)
+		dlEntry.bands =  parseCombos(r)
 		e = &dlEntry
 	case 138:
 		// UL
 		ulEntry := UplinkEntry{}
-		ulEntry.combos = parseCombos(r)
+		ulEntry.bands = parseCombos(r)
 		e = &ulEntry
 	default:
 		Log.Warnf("Invalid type %d found!", entryType)

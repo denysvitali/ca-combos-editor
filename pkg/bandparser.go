@@ -4,7 +4,6 @@ import (
 	"errors"
 	"strconv"
 	"strings"
-	"testing"
 	"unicode"
 )
 
@@ -31,13 +30,21 @@ func (r* MyStringReader) GoBack() {
 
 func (r* MyStringReader) readNumber() (int, error) {
 	var numberRunes []rune
-	c := r.NextRune()
+	c, _, err := r.reader.ReadRune()
+	if err != nil {
+		return -1, err
+	}
 	for unicode.IsNumber(c) {
 		numberRunes = append(numberRunes, c)
-		c = r.NextRune()
+		c, _, err = r.reader.ReadRune()
+		if err != nil {
+			break
+		}
 	}
 
-	r.GoBack()
+	if err == nil {
+		r.GoBack()
+	}
 
 	if len(numberRunes) > 0 {
 		number, err := strconv.Atoi(string(numberRunes))
@@ -51,32 +58,78 @@ func (r* MyStringReader) readNumber() (int, error) {
 	return -1, errors.New("number not found")
 }
 
+func (r* MyStringReader) skipOrFailGracefully(expectedRune rune) {
+
+}
+
 func (r* MyStringReader) readClass() int {
-	c := r.NextRune()
+	c, _, err := r.reader.ReadRune()
+	if err != nil {
+		return -1
+	}
 	classes := "ABCD"
 
-	return strings.Index(classes, string(c)) + 1
-}
+	class_index := strings.Index(classes, string(c))
 
-
-func parseComboText(comboString string) Entry {
-	r := NewMyStringReader(comboString)
-
-	band, err := r.readNumber()
-	if err != nil {
-		Log.Fatalf("Unable to parse Combo Text: %s", err)
+	if class_index == -1 {
+		r.GoBack()
+		return -1
 	}
 
-	b := Band{}
-	b.Band = band
-	b.Class = r.readClass()
-
-	e := UplinkEntry{}
-
-	return &e
+	return  class_index + 1
 }
 
-func TestParseCombo(t *testing.T){
-	comboString := "3A2-1A4A"
-	parseComboText(comboString)
+func hasNextBand(r* MyStringReader) bool {
+	ch, _, err := r.reader.ReadRune()
+	if err != nil {
+		return false
+	}
+
+	if ch == rune('-') {
+		return true
+	}
+
+	r.reader.UnreadRune()
+	return false
+}
+
+func parseComboText(comboString string) []Entry {
+	r := NewMyStringReader(comboString)
+
+	var entries []Entry
+	dl := DownlinkEntry{}
+	ul := UplinkEntry{}
+
+	cont := true
+	for cont {
+		band, err := r.readNumber()
+		if err != nil {
+			break
+		}
+
+		b := Band{}
+		b.Band = band
+		b.Class = r.readClass()
+
+		dl.bands = append(dl.bands, b)
+
+		mimo, err := r.readNumber()
+		Log.Debugf("MIMO: %d", mimo)
+
+		ulClass := r.readClass()
+		if ulClass > 0 {
+			ulband := Band{
+				band,
+				ulClass,
+			}
+			ul.bands = append(ul.bands, ulband)
+		}
+
+		cont = hasNextBand(&r)
+	}
+
+	entries = append(entries, &dl)
+	entries = append(entries, &ul)
+
+	return entries
 }

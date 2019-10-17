@@ -23,7 +23,7 @@ func main(){
 
 	for _, e := range cf.Entries {
 		logrus.Info("Entry " + fmt.Sprintf("%s: %v", e.Name(),
-			e.Combos()))
+			e.Bands()))
 	}
 
 }
