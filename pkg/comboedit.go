@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
 	"github.com/Sirupsen/logrus"
 	"io/ioutil"
@@ -50,7 +51,7 @@ func (m *MyReader) expect(b byte) {
 }
 
 type ComboFile struct {
-	Entries_Len int
+	Entries_Len uint16
 	Entries     []Entry
 }
 
@@ -96,12 +97,13 @@ func (c *ComboEdit) Parse() ComboFile {
 	cf := ComboFile{}
 
 	// Length Section
-	len := r.rb()
-	cf.Entries_Len = int(len)
-	Log.Info("This CA Bands files contains ", len, " Entries_Len")
-	r.expect(0x00)
+	var lenArr []byte
+	lenArr = append(lenArr, r.rb())
+	lenArr = append(lenArr, r.rb())
+	cf.Entries_Len = binary.LittleEndian.Uint16(lenArr)
+	Log.Info("This CA Bands files contains ", cf.Entries_Len, " entries")
 
-	for i:=0; i<cf.Entries_Len; i++ {
+	for i:=uint16(0); i<cf.Entries_Len; i++ {
 		cf.Entries = append(cf.Entries, c.parseEntry(&r))
 	}
 
@@ -112,8 +114,10 @@ func (w *ComboWriter) Write(entries []Entry) []byte {
 	var output []byte
 	output = append(output, 0x00)
 	output = append(output, 0x00)
-	output = append(output, byte(len(entries)))
-	output = append(output, 0x00)
+
+	var b = make([]byte, 2)
+	binary.LittleEndian.PutUint16(b, uint16(len(entries)))
+	output = append(output, b...)
 
 	for _, e := range entries {
 		w.writeEntry(e)
@@ -135,8 +139,7 @@ func ReadComboFile(path string) {
 	cf := ce.Parse()
 
 	for _, e := range cf.Entries {
-		fmt.Printf("Entry " + fmt.Sprintf("%s: %v", e.Name(),
-			e.Bands()))
+		fmt.Printf("Entry %s: %v\n", e.Name(), e.Bands())
 	}
 }
 
@@ -181,13 +184,13 @@ func (c *ComboEdit) parseEntry(r *MyReader) Entry {
 func (c *ComboWriter) writeEntry(entry Entry){
 	switch entry.(type) {
 	case *DownlinkEntry:
-		c.FileBody = append(c.FileBody, 137)
+		c.FileBody = append(c.FileBody, byte(137))
 		c.FileBody = append(c.FileBody, 0)
 		c.writeBands(entry.Bands())
 
 
 	case *UplinkEntry:
-		c.FileBody = append(c.FileBody, 138)
+		c.FileBody = append(c.FileBody, byte(138))
 		c.FileBody = append(c.FileBody, 0)
 		c.writeBands(entry.Bands())
 	}
@@ -213,9 +216,13 @@ func parseBands(r *MyReader) []Band {
 func (c *ComboWriter) writeBands(bands []Band){
 	for i := 0; i<6; i++ {
 		if i < len(bands) {
-			c.FileBody = append(c.FileBody, byte(bands[i].Band))
+			c.FileBody = append(c.FileBody, byte(int8(bands[i].Band)))
 			c.FileBody = append(c.FileBody, 0x00)
-			c.FileBody = append(c.FileBody, byte(bands[i].Class))
+			c.FileBody = append(c.FileBody, byte(int8(bands[i].Class)))
+		} else {
+			c.FileBody = append(c.FileBody, 0x00)
+			c.FileBody = append(c.FileBody, 0x00)
+			c.FileBody = append(c.FileBody, 0x00)
 		}
 	}
 }
