@@ -1,7 +1,9 @@
 package pkg
 
 import (
+	"bufio"
 	"errors"
+	"os"
 	"strconv"
 	"strings"
 	"unicode"
@@ -132,4 +134,33 @@ func parseComboText(comboString string) []Entry {
 	entries = append(entries, &ul)
 
 	return entries
+}
+
+func ParseBandFile(path string) []Entry {
+	comboFile, err := os.Open(path)
+	if err != nil {
+		Log.Fatal(err)
+	}
+	defer comboFile.Close()
+
+	var finalEntries []Entry
+
+	scanner := bufio.NewScanner(comboFile)
+	for scanner.Scan() {
+		text := scanner.Text()
+
+		if text == "" {
+			continue
+		}
+		entries := parseComboText(text)
+		for _, e := range entries {
+			finalEntries = append(finalEntries, e)
+		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		Log.Fatal(err)
+	}
+
+	return finalEntries
 }

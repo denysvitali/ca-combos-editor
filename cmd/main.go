@@ -1,29 +1,37 @@
 package main
 
 import (
-	"fmt"
 	"github.com/Sirupsen/logrus"
+	"github.com/alexflint/go-arg"
 	"github.com/denysvitali/ca-combos-editor/pkg"
-	"io/ioutil"
-	"log"
-	"os"
 )
 
+type CreateCmd struct {
+	Input string `arg:"positional"`
+	Output string `arg:"positional"`
+}
+
+type ParseCmd struct {
+	Input string `arg:"positional"`
+}
+
+var args struct {
+	Create *CreateCmd `arg:"subcommand:create"`
+	Parse *ParseCmd `arg:"subcommand:parse"`
+}
+
 func main(){
+	arg.MustParse(&args)
 	pkg.Log.Level = logrus.DebugLevel
-	args := os.Args[1:]
-	result, err := ioutil.ReadFile(args[0])
 
-	if err != nil {
-		log.Fatal(err)
-	}
+	switch {
+	case args.Create != nil:
+		entries := pkg.ParseBandFile(args.Create.Input)
+		pkg.WriteComboFile(entries, args.Create.Output)
+	case args.Parse != nil:
+		pkg.ReadComboFile(args.Parse.Input)
+	default:
 
-	ce := pkg.NewComboEdit(result)
-	cf := ce.Parse()
-
-	for _, e := range cf.Entries {
-		logrus.Info("Entry " + fmt.Sprintf("%s: %v", e.Name(),
-			e.Bands()))
 	}
 
 }

@@ -2,13 +2,21 @@ package pkg
 
 import (
 	"bytes"
+	"fmt"
 	"github.com/Sirupsen/logrus"
+	"io/ioutil"
+	"os"
 )
 
 var Log = logrus.New()
 
 type ComboEdit struct {
 	FileContent []byte
+}
+
+type ComboWriter struct {
+	FileBody []byte
+	EntriesLength int
 }
 
 func NewComboEdit(input []byte) ComboEdit {
@@ -56,11 +64,11 @@ type UplinkEntry struct {
 }
 
 func (u* UplinkEntry) Bands() []Band {
-	return u.bands;
+	return u.bands
 }
 
 func (u* UplinkEntry) Name() string {
-	return "UL";
+	return "UL"
 }
 
 type DownlinkEntry struct {
@@ -100,6 +108,53 @@ func (c *ComboEdit) Parse() ComboFile {
 	return cf
 }
 
+func (w *ComboWriter) Write(entries []Entry) []byte {
+	var output []byte
+	output = append(output, 0x00)
+	output = append(output, 0x00)
+	output = append(output, byte(len(entries)))
+	output = append(output, 0x00)
+
+	for _, e := range entries {
+		w.writeEntry(e)
+	}
+
+	output = append(output, w.FileBody...)
+
+	return output
+}
+
+func ReadComboFile(path string) {
+	result, err := ioutil.ReadFile(path)
+
+	if err != nil {
+		Log.Fatal(err)
+	}
+
+	ce := NewComboEdit(result)
+	cf := ce.Parse()
+
+	for _, e := range cf.Entries {
+		fmt.Printf("Entry " + fmt.Sprintf("%s: %v", e.Name(),
+			e.Bands()))
+	}
+}
+
+func WriteComboFile(entries []Entry, path string) {
+	w := ComboWriter{}
+
+	f, err := os.Create(path)
+	if err != nil {
+		Log.Fatalf("unable to open file \"%s\" for writing", path)
+	}
+	defer f.Close()
+	_, err = f.Write(w.Write(entries))
+	if err != nil {
+		Log.Fatalf("unable to write file \"%s\"", path)
+	}
+}
+
+
 func (c *ComboEdit) parseEntry(r *MyReader) Entry {
 	var e Entry
 	entryType := int(r.rb())
@@ -110,22 +165,35 @@ func (c *ComboEdit) parseEntry(r *MyReader) Entry {
 	case 137:
 		// DL
 		dlEntry := DownlinkEntry{}
-		dlEntry.bands =  parseCombos(r)
+		dlEntry.bands =  parseBands(r)
 		e = &dlEntry
 	case 138:
 		// UL
 		ulEntry := UplinkEntry{}
-		ulEntry.bands = parseCombos(r)
+		ulEntry.bands = parseBands(r)
 		e = &ulEntry
 	default:
 		Log.Warnf("Invalid type %d found!", entryType)
 	}
-
-
 	return e
 }
 
-func parseCombos(r *MyReader) []Band {
+func (c *ComboWriter) writeEntry(entry Entry){
+	switch entry.(type) {
+	case *DownlinkEntry:
+		c.FileBody = append(c.FileBody, 137)
+		c.FileBody = append(c.FileBody, 0)
+		c.writeBands(entry.Bands())
+
+
+	case *UplinkEntry:
+		c.FileBody = append(c.FileBody, 138)
+		c.FileBody = append(c.FileBody, 0)
+		c.writeBands(entry.Bands())
+	}
+}
+
+func parseBands(r *MyReader) []Band {
 	var combos []Band
 
 	for i:=0; i<6;i++ {
@@ -139,6 +207,15 @@ func parseCombos(r *MyReader) []Band {
 
 		combos = append(combos, bwc)
 	}
-
 	return combos
+}
+
+func (c *ComboWriter) writeBands(bands []Band){
+	for i := 0; i<6; i++ {
+		if i < len(bands) {
+			c.FileBody = append(c.FileBody, byte(bands[i].Band))
+			c.FileBody = append(c.FileBody, 0x00)
+			c.FileBody = append(c.FileBody, byte(bands[i].Class))
+		}
+	}
 }
