@@ -160,6 +160,8 @@ func ParseBandFile(path string) []Entry {
 	defer comboFile.Close()
 
 	var finalEntries []Entry
+	var finalEntriesHM = make(map[string][]Entry)
+
 
 	scanner := bufio.NewScanner(comboFile)
 	for scanner.Scan() {
@@ -169,9 +171,26 @@ func ParseBandFile(path string) []Entry {
 			continue
 		}
 		entries := parseComboText(text)
+		var dl = ""
 		for _, e := range entries {
-			finalEntries = append(finalEntries, e)
+			if dl == "" {
+				if e.Name() == "DL" {
+					dl = e.String()
+				} else {
+					continue
+				}
+			}
+
+			if e.Name() == "DL" && len(finalEntriesHM[dl]) > 1 {
+				continue
+			}
+
+			finalEntriesHM[dl] = append(finalEntriesHM[dl], e)
 		}
+	}
+
+	for _, v := range finalEntriesHM {
+		finalEntries = append(finalEntries, v...)
 	}
 
 	if err := scanner.Err(); err != nil {
