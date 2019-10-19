@@ -2,6 +2,7 @@ package pkg
 
 import (
 	"bufio"
+	"github.com/Sirupsen/logrus"
 	"log"
 	"testing"
 )
@@ -13,6 +14,13 @@ func TestParseCombo(t *testing.T){
 	for _, e := range entries {
 		log.Printf("Entry: %v", e)
 	}
+}
+
+func TestParseComplexCombo(t *testing.T){
+	Log.Level = logrus.DebugLevel
+	entries := parseComboText("7C44C-3C22")
+
+	log.Printf("Entries: %v", entries)
 }
 
 func Readln(r *bufio.Reader) (string, error) {

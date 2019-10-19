@@ -7,6 +7,8 @@ import (
 	"github.com/Sirupsen/logrus"
 	"io/ioutil"
 	"os"
+	"sort"
+	"strings"
 )
 
 var Log = logrus.New()
@@ -16,12 +18,12 @@ type ComboEdit struct {
 }
 
 type ComboWriter struct {
-	FileBody []byte
+	FileBody      []byte
 	EntriesLength int
 }
 
 func NewComboEdit(input []byte) ComboEdit {
-	return ComboEdit{FileContent:input}
+	return ComboEdit{FileContent: input}
 }
 
 type MyReader struct {
@@ -29,7 +31,7 @@ type MyReader struct {
 }
 
 func NewMyReader(reader *bytes.Reader) MyReader {
-	return MyReader{reader:reader}
+	return MyReader{reader: reader}
 }
 
 func (m *MyReader) rb() byte {
@@ -45,8 +47,8 @@ func (m *MyReader) expect(b byte) {
 	found := m.rb()
 	if found != b {
 		Log.Fatalf("Unexpected byte %02X found, %02X expected",
-				found & 0xFF,
-				b & 0xFF)
+			found&0xFF,
+			b&0xFF)
 	}
 }
 
@@ -58,35 +60,82 @@ type ComboFile struct {
 type Entry interface {
 	Name() string
 	Bands() []Band
+	String() string
 }
 
 type UplinkEntry struct {
 	bands []Band
 }
 
-func (u* UplinkEntry) Bands() []Band {
+func (u *UplinkEntry) Bands() []Band {
 	return u.bands
 }
 
-func (u* UplinkEntry) Name() string {
+func (u *UplinkEntry) Name() string {
 	return "UL"
+}
+
+func (u *UplinkEntry) String() string {
+	sort.Sort(BandArr(u.bands))
+	var bands []string
+
+	for _, b := range u.bands {
+		bands = append(bands, b.String())
+	}
+
+	return strings.Join(bands, "-")
 }
 
 type DownlinkEntry struct {
 	bands []Band
 }
 
-func (d* DownlinkEntry) Bands() []Band {
-	return d.bands;
+func (d *DownlinkEntry) Bands() []Band {
+	return d.bands
 }
 
-func (d* DownlinkEntry) Name() string {
-	return "DL";
+func (d *DownlinkEntry) Name() string {
+	return "DL"
+}
+
+func (d *DownlinkEntry) String() string {
+	sort.Sort(BandArr(d.bands))
+	var bands []string
+
+	for _, b := range d.bands {
+		bands = append(bands, b.String())
+	}
+
+	return strings.Join(bands, "-")
 }
 
 type Band struct {
 	Band  int
 	Class int
+}
+
+func (b Band) String() string {
+	// http://niviuk.free.fr/lte_ca_band.php#lte_ca_class
+	// G and H are missing, TODO: inspect if QPST treats I as 7 or 9
+	bandClasses := []string{"A", "B", "C", "D", "E", "F", "G", "H", "I"}
+	if b.Band < 1 || b.Band > 255 || b.Class < 1 || b.Class > 9 {
+		return ""
+	}
+	return fmt.Sprintf("%d%s", b.Band, bandClasses[b.Class-1])
+}
+
+type BandArr []Band
+
+func (b BandArr) Len() int {
+	return len(b)
+}
+
+func (b BandArr) Swap(i, j int) {
+	b[i], b[j] = b[j], b[i]
+}
+
+func (b BandArr) Less(i, j int) bool {
+	return b[i].Band > b[j].Band
 }
 
 func (c *ComboEdit) Parse() ComboFile {
@@ -103,7 +152,7 @@ func (c *ComboEdit) Parse() ComboFile {
 	cf.Entries_Len = binary.LittleEndian.Uint16(lenArr)
 	Log.Info("This CA Bands files contains ", cf.Entries_Len, " entries")
 
-	for i:=uint16(0); i<cf.Entries_Len; i++ {
+	for i := uint16(0); i < cf.Entries_Len; i++ {
 		cf.Entries = append(cf.Entries, c.parseEntry(&r))
 	}
 
@@ -139,7 +188,7 @@ func ReadComboFile(path string) {
 	cf := ce.Parse()
 
 	for _, e := range cf.Entries {
-		fmt.Printf("Entry %s: %v\n", e.Name(), e.Bands())
+		fmt.Printf("Entry %s: %v\n", e.Name(), e)
 	}
 }
 
@@ -157,7 +206,6 @@ func WriteComboFile(entries []Entry, path string) {
 	}
 }
 
-
 func (c *ComboEdit) parseEntry(r *MyReader) Entry {
 	var e Entry
 	entryType := int(r.rb())
@@ -168,7 +216,7 @@ func (c *ComboEdit) parseEntry(r *MyReader) Entry {
 	case 137:
 		// DL
 		dlEntry := DownlinkEntry{}
-		dlEntry.bands =  parseBands(r)
+		dlEntry.bands = parseBands(r)
 		e = &dlEntry
 	case 138:
 		// UL
@@ -181,13 +229,12 @@ func (c *ComboEdit) parseEntry(r *MyReader) Entry {
 	return e
 }
 
-func (c *ComboWriter) writeEntry(entry Entry){
+func (c *ComboWriter) writeEntry(entry Entry) {
 	switch entry.(type) {
 	case *DownlinkEntry:
 		c.FileBody = append(c.FileBody, byte(137))
 		c.FileBody = append(c.FileBody, 0)
 		c.writeBands(entry.Bands())
-
 
 	case *UplinkEntry:
 		c.FileBody = append(c.FileBody, byte(138))
@@ -199,7 +246,7 @@ func (c *ComboWriter) writeEntry(entry Entry){
 func parseBands(r *MyReader) []Band {
 	var combos []Band
 
-	for i:=0; i<6;i++ {
+	for i := 0; i < 6; i++ {
 		bwc := Band{}
 		band := int(r.rb())
 		r.expect(0x00)
@@ -208,13 +255,18 @@ func parseBands(r *MyReader) []Band {
 		bwc.Band = band
 		bwc.Class = class
 
+		if bwc.Band < 1 || bwc.Band > 255 || bwc.Class < 0 || bwc.Class > 9 {
+			// Null, skip
+			continue
+		}
+
 		combos = append(combos, bwc)
 	}
 	return combos
 }
 
-func (c *ComboWriter) writeBands(bands []Band){
-	for i := 0; i<6; i++ {
+func (c *ComboWriter) writeBands(bands []Band) {
+	for i := 0; i < 6; i++ {
 		if i < len(bands) {
 			c.FileBody = append(c.FileBody, byte(int8(bands[i].Band)))
 			c.FileBody = append(c.FileBody, 0x00)

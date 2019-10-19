@@ -71,14 +71,14 @@ func (r* MyStringReader) readClass() int {
 	}
 	classes := "ABCD"
 
-	class_index := strings.Index(classes, string(c))
+	classIndex := strings.Index(classes, string(c))
 
-	if class_index == -1 {
+	if classIndex == -1 {
 		r.GoBack()
 		return -1
 	}
 
-	return  class_index + 1
+	return  classIndex + 1
 }
 
 func hasNextBand(r* MyStringReader) bool {
@@ -113,10 +113,18 @@ func parseComboText(comboString string) []Entry {
 		b.Band = band
 		b.Class = r.readClass()
 
-		dl.bands = append(dl.bands, b)
-
 		mimo, err := r.readNumber()
 		Log.Debugf("MIMO: %d", mimo)
+
+		countMimo := len(strconv.Itoa(mimo))
+
+		if err != nil || countMimo == 0 {
+			dl.bands = append(dl.bands, b)
+		} else {
+			for i:=0; i< countMimo; i++ {
+				dl.bands = append(dl.bands, b)
+			}
+		}
 
 		ulClass := r.readClass()
 		if ulClass > 0 {
@@ -124,7 +132,15 @@ func parseComboText(comboString string) []Entry {
 				band,
 				ulClass,
 			}
-			ul.bands = append(ul.bands, ulband)
+
+
+			if err != nil || countMimo == 0 {
+				ul.bands = append(ul.bands, ulband)
+			} else {
+				for i:=0; i< countMimo; i++ {
+					ul.bands = append(ul.bands, ulband)
+				}
+			}
 		}
 
 		cont = hasNextBand(&r)
