@@ -1,6 +1,6 @@
 # ca-combos-editor
 
-A combo editor for NV ITEM 00028874
+A combo editor for NV ITEM 00028874 (RFNV_LTE_CA_BW_CLASS_COMBO_I)
 
 ## Setup
 1. Clone this repo
