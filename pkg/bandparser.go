@@ -185,6 +185,17 @@ func ParseBandFile(path string) []Entry {
 				continue
 			}
 
+			found := false
+			for _, v := range(finalEntriesHM[dl]) {
+				if v.String() == e.String() {
+					found = true
+				}
+			}
+
+			if found {
+				continue
+			}
+
 			finalEntriesHM[dl] = append(finalEntriesHM[dl], e)
 		}
 	}

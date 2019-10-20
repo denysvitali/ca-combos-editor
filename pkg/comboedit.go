@@ -174,6 +174,8 @@ func (w *ComboWriter) Write(entries []Entry) []byte {
 
 	output = append(output, w.FileBody...)
 
+	Log.Infof("Writing %d entries...", len(entries))
+
 	return output
 }
 
