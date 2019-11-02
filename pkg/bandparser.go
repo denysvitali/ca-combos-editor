@@ -128,19 +128,20 @@ func parseComboText(comboString string) []Entry {
 
 		ulClass := r.readClass()
 		if ulClass > 0 {
-			ulband := Band{
+			ulBand := Band{
 				band,
 				ulClass,
 			}
 
-
-			if err != nil || countMimo == 0 {
-				ul.bands = append(ul.bands, ulband)
+			/*if err != nil || countMimo == 0 {
+				ul.bands = append(ul.bands, ulBand)
 			} else {
 				for i:=0; i< countMimo; i++ {
-					ul.bands = append(ul.bands, ulband)
+					ul.bands = append(ul.bands, ulBand)
 				}
-			}
+			}*/
+
+			ul.bands = append(ul.bands, ulBand)
 		}
 
 		cont = hasNextBand(&r)
@@ -186,7 +187,7 @@ func ParseBandFile(path string) []Entry {
 			}
 
 			found := false
-			for _, v := range(finalEntriesHM[dl]) {
+			for _, v := range finalEntriesHM[dl] {
 				if v.String() == e.String() {
 					found = true
 				}
