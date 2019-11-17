@@ -93,6 +93,8 @@ in `resources/rmt_storage_patch/op5t/oos/9.0.9/rmt_storage` (see its checksum be
 This will completely disable the NV Backup and will allow
 you to rewrite any NV item file without having it rewritten at every reboot. If the patch succeeds you'll have the
 following output when you go to the dialer pad, write `*#268#` (2NV) and click "NV parameters":
+  
+  
 <img alt="NV Backup UI shows \"Partition Verify: Failed\"" height="300" src="resources/screenshots/op5t-nvbackup.png"/> 
   
 ```
