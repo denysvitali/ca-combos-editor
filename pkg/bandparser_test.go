@@ -3,6 +3,7 @@ package pkg
 import (
 	"bufio"
 	"github.com/Sirupsen/logrus"
+	"github.com/stretchr/testify/assert"
 	"log"
 	"testing"
 )
@@ -21,6 +22,27 @@ func TestParseComplexCombo(t *testing.T){
 	entries := parseComboText("7C44C-3C22")
 
 	log.Printf("Entries: %v", entries)
+}
+
+func TestParseCombo2(t *testing.T) {
+	Log.Level = logrus.DebugLevel
+	entries := parseComboText("3C44A-0")
+
+	assert.Equal(t,2, len(entries))
+
+	dlEntry, ok := entries[0].(*DownlinkEntry)
+	assert.True(t, ok)
+
+	bands := dlEntry.Bands()
+	assert.Equal(t, 2, len(bands))
+
+	firstBand := bands[0]
+	assert.Equal(t, 3, firstBand.Band)
+	assert.Equal(t, 3, firstBand.Class) // C
+
+	secondBand := bands[1]
+	assert.Equal(t, 3, secondBand.Band)
+	assert.Equal(t, 1, secondBand.Class) // A
 }
 
 func Readln(r *bufio.Reader) (string, error) {

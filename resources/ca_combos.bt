@@ -41,7 +41,7 @@ for(i=0; i<caCombos.header.entries; i++){
     if(caCombos.entries[i].type == 138)
         entryType = "UL";
 
-    Printf("Entry %s: \n\t", entryType);
+    Printf("Entry (%d) %s: \n\t", i, entryType);
     for(j=0; j<6;j++){
         if(caCombos.entries[i].bands[j].band == 0){
             break;
