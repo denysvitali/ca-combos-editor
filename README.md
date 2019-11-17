@@ -92,10 +92,13 @@ Oneplus does rewrite the NV Item files via its "NV Backup". Use a patched `/vend
 in `resources/rmt_storage_patch/op5t/oos/9.0.9/rmt_storage` (see its checksum below).   
 This will completely disable the NV Backup and will allow
 you to rewrite any NV item file without having it rewritten at every reboot. If the patch succeeds you'll have the
-following output when you go to the dialer pad, write `*#268#` (2NV) and click "NV parameters":
+following output when you go to the dialer pad, write `*#268#` (2NV) and click "NV parameters":  
+
+<p align="center">
+<img alt="NV Backup UI shows Partition Verify: Failed" height="400" src="resources/screenshots/op5t-nvbackup.png"/>  
+</p>
+
   
-  
-<img alt="NV Backup UI shows \"Partition Verify: Failed\"" height="300" src="resources/screenshots/op5t-nvbackup.png"/> 
   
 ```
 2ebd9ab966f395f387c888c9c591c8a2b5720204abc2ba2619d2c10d6cc38506  rmt_storage (patched)
