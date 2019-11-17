@@ -70,5 +70,5 @@ func Readln(r *bufio.Reader) (string, error) {
 
 func TestParseFile(t *testing.T){
 	Log.Level = logrus.DebugLevel
-	ParseBandFile("./test/resources/2019-10-17/bands.txt")
+	ParseBandFile("../test/resources/2019-10-17/bands.txt")
 }
