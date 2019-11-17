@@ -53,8 +53,8 @@ func (m *MyReader) expect(b byte) {
 }
 
 type ComboFile struct {
-	Entries_Len uint16
-	Entries     []Entry
+	EntriesLen uint16
+	Entries    []Entry
 }
 
 type Entry interface {
@@ -125,6 +125,21 @@ func (b Band) String() string {
 }
 
 type BandArr []Band
+type UlArr []UplinkEntry
+
+func (u UlArr) Len() int {
+	return len(u)
+}
+
+func (u UlArr) Less(i, j int) bool {
+	return u[i].bands[0].Band < u[j].bands[0].Band;
+}
+
+func (u UlArr) Swap(i, j int) {
+	u[i], u[j] = u[j], u[i]
+}
+
+type DlArr []DownlinkEntry
 
 func (b BandArr) Len() int {
 	return len(b)
@@ -149,10 +164,10 @@ func (c *ComboEdit) Parse() ComboFile {
 	var lenArr []byte
 	lenArr = append(lenArr, r.rb())
 	lenArr = append(lenArr, r.rb())
-	cf.Entries_Len = binary.LittleEndian.Uint16(lenArr)
-	Log.Info("This CA Bands files contains ", cf.Entries_Len, " entries")
+	cf.EntriesLen = binary.LittleEndian.Uint16(lenArr)
+	Log.Info("This CA Bands files contains ", cf.EntriesLen, " entries")
 
-	for i := uint16(0); i < cf.Entries_Len; i++ {
+	for i := uint16(0); i < cf.EntriesLen; i++ {
 		cf.Entries = append(cf.Entries, c.parseEntry(&r))
 	}
 
@@ -236,11 +251,20 @@ func (c *ComboWriter) writeEntry(entry Entry) {
 	case *DownlinkEntry:
 		c.FileBody = append(c.FileBody, byte(137))
 		c.FileBody = append(c.FileBody, 0)
-		c.writeBands(entry.Bands())
+		sortedBands := entry.Bands()
+		sort.Sort(BandArr(sortedBands))
+
+		for i := len(sortedBands)/2-1; i >= 0; i-- {
+			opp := len(sortedBands)-1-i
+			sortedBands[i], sortedBands[opp] = sortedBands[opp], sortedBands[i]
+		}
+
+		c.writeBands(sortedBands)
 
 	case *UplinkEntry:
 		c.FileBody = append(c.FileBody, byte(138))
 		c.FileBody = append(c.FileBody, 0)
+
 		c.writeBands(entry.Bands())
 	}
 }

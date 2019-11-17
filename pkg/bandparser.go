@@ -3,7 +3,9 @@ package pkg
 import (
 	"bufio"
 	"errors"
+	"github.com/Sirupsen/logrus"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 	"unicode"
@@ -96,6 +98,7 @@ func hasNextBand(r* MyStringReader) bool {
 }
 
 func parseComboText(comboString string) []Entry {
+	Log.Debugf("comboString: %s", comboString)
 	r := NewMyStringReader(comboString)
 
 	var entries []Entry
@@ -113,16 +116,20 @@ func parseComboText(comboString string) []Entry {
 		b.Band = band
 		b.Class = r.readClass()
 
+		if b.Class == -1 {
+			break
+		}
+
 		mimo, err := r.readNumber()
-		Log.Debugf("MIMO: %d", mimo)
+		//Log.Debugf("MIMO: %d", mimo)
 
 		countMimo := len(strconv.Itoa(mimo))
 
 		if err != nil || countMimo == 0 {
 			dl.bands = append(dl.bands, b)
 		} else {
-			for i:=0; i< countMimo; i++ {
-				dl.bands = append(dl.bands, b)
+			for i:=0; i < countMimo; i++ {
+					dl.bands = append(dl.bands, b)
 			}
 		}
 
@@ -150,7 +157,76 @@ func parseComboText(comboString string) []Entry {
 	entries = append(entries, &dl)
 	entries = append(entries, &ul)
 
+	if len(ul.bands) > 1 {
+		Log.Warnf("UL => %v", ul)
+		return nil
+	}
+
+	Log.Debugf("=> %v", entries)
 	return entries
+}
+
+func ParseBandDLULFile(downlink string, uplink string) []Entry {
+	dlFile, err := os.Open(downlink)
+	if err != nil {
+		Log.Fatal(err)
+	}
+	ulFile, err := os.Open(uplink)
+	if err != nil {
+		Log.Fatal(err)
+	}
+
+	defer dlFile.Close()
+	defer ulFile.Close()
+
+	var finalEntries []Entry
+
+	dlScanner := bufio.NewScanner(dlFile)
+	ulScanner := bufio.NewScanner(ulFile)
+
+	for dlScanner.Scan() {
+		ulScanner.Scan()
+		dlText := dlScanner.Text()
+		ulText := ulScanner.Text()
+
+		if dlText == "" {
+			continue
+		}
+
+		entry := parseComboText(dlText)[0]
+		ulBands := strings.Split(ulText, ", ")
+		var ulEntries []Entry
+
+		sort.Sort(sort.StringSlice(ulBands))
+
+
+		if len(ulBands) > 0 && ulText != "" {
+			for _, bText := range ulBands {
+				ulEntries = append(ulEntries, &UplinkEntry{bands: []Band{parseSingleBand(bText)}})
+			}
+		}
+
+		finalEntries = append(finalEntries, entry)
+		finalEntries = append(finalEntries, ulEntries...)
+	}
+
+	return finalEntries
+}
+
+func parseSingleBand(text string) Band {
+	r := NewMyStringReader(text)
+
+	bandNumber, err := r.readNumber()
+	if err != nil {
+		logrus.Fatal(err)
+	}
+
+	bandClass := r.readClass()
+	if bandClass == -1 {
+		logrus.Fatal("invalid band class")
+	}
+
+	return Band{Band:bandNumber, Class: bandClass}
 }
 
 func ParseBandFile(path string) []Entry {
@@ -202,7 +278,29 @@ func ParseBandFile(path string) []Entry {
 	}
 
 	for _, v := range finalEntriesHM {
-		finalEntries = append(finalEntries, v...)
+		var dlEntries []DownlinkEntry
+		var ulEntries []UplinkEntry
+
+		for _, e := range v {
+			switch e := e.(type) {
+			case *DownlinkEntry:
+				dlEntries = append(dlEntries, *e)
+			case *UplinkEntry:
+				ulEntries = append(ulEntries, *e)
+			}
+		}
+		sort.Sort(UlArr(ulEntries))
+
+		for _, e := range dlEntries {
+			finalEntries = append(finalEntries, &DownlinkEntry{bands: e.bands})
+		}
+
+		for _, e := range ulEntries {
+			finalEntries = append(finalEntries, &UplinkEntry{bands: e.bands})
+		}
+
+
+
 	}
 
 	if err := scanner.Err(); err != nil {
