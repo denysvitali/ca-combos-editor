@@ -28,6 +28,9 @@ func TestParseCombo2(t *testing.T) {
 	Log.Level = logrus.DebugLevel
 	entries := parseComboText("3C44A-0")
 
+	// DL: 3C 3C
+	// UL: 3A
+
 	assert.Equal(t,2, len(entries))
 
 	dlEntry, ok := entries[0].(*DownlinkEntry)
@@ -42,7 +45,15 @@ func TestParseCombo2(t *testing.T) {
 
 	secondBand := bands[1]
 	assert.Equal(t, 3, secondBand.Band)
-	assert.Equal(t, 1, secondBand.Class) // A
+	assert.Equal(t, 3, secondBand.Class) // C
+
+	ulEntry, ok := entries[1].(*UplinkEntry)
+	assert.True(t, ok)
+
+	thirdBand := ulEntry.Bands()[0]
+	assert.Equal(t, 3, thirdBand.Band)
+	assert.Equal(t, 1, thirdBand.Class)
+
 }
 
 func Readln(r *bufio.Reader) (string, error) {
