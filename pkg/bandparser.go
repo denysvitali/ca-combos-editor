@@ -138,16 +138,8 @@ func parseComboText(comboString string) []Entry {
 			ulBand := Band{
 				band,
 				ulClass,
+				0,
 			}
-
-			/*if err != nil || countMimo == 0 {
-				ul.bands = append(ul.bands, ulBand)
-			} else {
-				for i:=0; i< countMimo; i++ {
-					ul.bands = append(ul.bands, ulBand)
-				}
-			}*/
-
 			ul.bands = append(ul.bands, ulBand)
 		}
 

@@ -17,9 +17,9 @@ struct Header {
 };
 
 struct Band {
-    unsigned short band;
-    char class;
-    char mimo;
+    unsigned short band <bgcolor=0x6ABB66>;
+    char class <bgcolor=0x26A7FF>;
+    char mimo <bgcolor=0xB73A67>;
 };
 
 typedef struct {

@@ -112,6 +112,7 @@ func (d *DownlinkEntry) String() string {
 type Band struct {
 	Band  int
 	Class int
+	Mimo  int
 }
 
 func (b Band) String() string {
@@ -240,6 +241,16 @@ func (c *ComboEdit) parseEntry(r *MyReader) Entry {
 		ulEntry := UplinkEntry{}
 		ulEntry.bands = parseBands(r)
 		e = &ulEntry
+
+	case 201:
+		dlEntry := DownlinkEntry{}
+		dlEntry.bands = parse20xBands(r)
+		e = &dlEntry
+
+	case 202:
+		ulEntry := UplinkEntry{}
+		ulEntry.bands = parse20xBands(r)
+		e = &ulEntry
 	default:
 		Log.Warnf("Invalid type %d found!", entryType)
 	}
@@ -274,12 +285,34 @@ func parseBands(r *MyReader) []Band {
 
 	for i := 0; i < 6; i++ {
 		bwc := Band{}
-		band := int(r.rb())
-		r.expect(0x00)
+		band := binary.LittleEndian.Uint16([]byte{r.rb(), r.rb()})
 		class := int(r.rb())
 
-		bwc.Band = band
+		bwc.Band = int(band)
 		bwc.Class = class
+
+		if bwc.Band < 1 || bwc.Band > 255 || bwc.Class < 0 || bwc.Class > 9 {
+			// Null, skip
+			continue
+		}
+
+		combos = append(combos, bwc)
+	}
+	return combos
+}
+
+func parse20xBands(r *MyReader) []Band {
+	var combos []Band
+
+	for i := 0; i < 6; i++ {
+		bwc := Band{}
+		band := binary.LittleEndian.Uint16([]byte{r.rb(), r.rb()})
+		class := int(r.rb())
+		mimo := int(r.rb())
+
+		bwc.Band = int(band)
+		bwc.Class = class
+		bwc.Mimo = mimo
 
 		if bwc.Band < 1 || bwc.Band > 255 || bwc.Class < 0 || bwc.Class > 9 {
 			// Null, skip
