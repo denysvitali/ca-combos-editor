@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"io/ioutil"
 	"os"
 	"sort"
@@ -17,9 +17,18 @@ type ComboEdit struct {
 	FileContent []byte
 }
 
+type ComboWriterMode int
+
+//go:generate stringer -type=ComboWriterMode
+const (
+	COMBOWRITER_137_138 ComboWriterMode = 137
+	COMBOWRITER_201_202 ComboWriterMode = 201
+)
+
 type ComboWriter struct {
 	FileBody      []byte
 	EntriesLength int
+	Mode          ComboWriterMode
 }
 
 func NewComboEdit(input []byte) ComboEdit {
@@ -122,7 +131,11 @@ func (b Band) String() string {
 	if b.Band < 1 || b.Band > 255 || b.Class < 1 || b.Class > 9 {
 		return ""
 	}
-	return fmt.Sprintf("%d%s", b.Band, bandClasses[b.Class-1])
+	mimoString := ""
+	if b.Mimo > 1 {
+		mimoString = fmt.Sprintf("%d", b.Mimo)
+	}
+	return fmt.Sprintf("%d%s%s", b.Band, bandClasses[b.Class-1], mimoString)
 }
 
 type BandArr []Band
@@ -133,7 +146,7 @@ func (u UlArr) Len() int {
 }
 
 func (u UlArr) Less(i, j int) bool {
-	return u[i].bands[0].Band < u[j].bands[0].Band;
+	return u[i].bands[0].Band < u[j].bands[0].Band
 }
 
 func (u UlArr) Swap(i, j int) {
@@ -206,16 +219,18 @@ func ReadComboFile(path string) {
 	cf := ce.Parse()
 
 	for _, e := range cf.Entries {
-		fmt.Printf("Entry %s: %v\n", e.Name(), e)
+		fmt.Printf("%s: %v\n", e.Name(), e)
 	}
 }
 
-func WriteComboFile(entries []Entry, path string) {
+func WriteComboFile(entries []Entry, mode ComboWriterMode, path string) {
 	w := ComboWriter{}
+	w.SetMode(mode)
 
 	f, err := os.Create(path)
 	if err != nil {
 		Log.Fatalf("unable to open file \"%s\" for writing", path)
+		return
 	}
 	defer f.Close()
 	_, err = f.Write(w.Write(entries))
@@ -257,26 +272,36 @@ func (c *ComboEdit) parseEntry(r *MyReader) Entry {
 	return e
 }
 
-func (c *ComboWriter) writeEntry(entry Entry) {
+func (w *ComboWriter) writeEntry(entry Entry) {
 	switch entry.(type) {
 	case *DownlinkEntry:
-		c.FileBody = append(c.FileBody, byte(137))
-		c.FileBody = append(c.FileBody, 0)
+		switch w.Mode {
+		case COMBOWRITER_137_138:
+			w.FileBody = append(w.FileBody, byte(137))
+		case COMBOWRITER_201_202:
+			w.FileBody = append(w.FileBody, byte(201))
+		}
+		w.FileBody = append(w.FileBody, 0)
 		sortedBands := entry.Bands()
 		sort.Sort(BandArr(sortedBands))
 
-		for i := len(sortedBands)/2-1; i >= 0; i-- {
-			opp := len(sortedBands)-1-i
+		for i := len(sortedBands)/2 - 1; i >= 0; i-- {
+			opp := len(sortedBands) - 1 - i
 			sortedBands[i], sortedBands[opp] = sortedBands[opp], sortedBands[i]
 		}
 
-		c.writeBands(sortedBands)
+		w.writeBands(sortedBands)
 
 	case *UplinkEntry:
-		c.FileBody = append(c.FileBody, byte(138))
-		c.FileBody = append(c.FileBody, 0)
+		switch w.Mode {
+		case COMBOWRITER_137_138:
+			w.FileBody = append(w.FileBody, byte(138))
+		case COMBOWRITER_201_202:
+			w.FileBody = append(w.FileBody, byte(202))
+		}
 
-		c.writeBands(entry.Bands())
+		w.FileBody = append(w.FileBody, 0)
+		w.writeBands(entry.Bands())
 	}
 }
 
@@ -324,16 +349,27 @@ func parse20xBands(r *MyReader) []Band {
 	return combos
 }
 
-func (c *ComboWriter) writeBands(bands []Band) {
+func (w *ComboWriter) writeBands(bands []Band) {
 	for i := 0; i < 6; i++ {
 		if i < len(bands) {
-			c.FileBody = append(c.FileBody, byte(int8(bands[i].Band)))
-			c.FileBody = append(c.FileBody, 0x00)
-			c.FileBody = append(c.FileBody, byte(int8(bands[i].Class)))
+			w.FileBody = append(w.FileBody, byte(bands[i].Band))
+			w.FileBody = append(w.FileBody, 0x00)
+			w.FileBody = append(w.FileBody, byte(bands[i].Class))
+
+			if w.Mode == COMBOWRITER_201_202 {
+				w.FileBody = append(w.FileBody, byte(bands[i].Mimo))
+			}
 		} else {
-			c.FileBody = append(c.FileBody, 0x00)
-			c.FileBody = append(c.FileBody, 0x00)
-			c.FileBody = append(c.FileBody, 0x00)
+			w.FileBody = append(w.FileBody, 0x00)
+			w.FileBody = append(w.FileBody, 0x00)
+			w.FileBody = append(w.FileBody, 0x00)
+			if w.Mode == COMBOWRITER_201_202 {
+				w.FileBody = append(w.FileBody, 0x00)
+			}
 		}
 	}
+}
+
+func (w *ComboWriter) SetMode(mode ComboWriterMode) {
+	w.Mode = mode
 }

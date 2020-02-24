@@ -3,7 +3,7 @@ package pkg
 import (
 	"bufio"
 	"errors"
-	"github.com/Sirupsen/logrus"
+	"github.com/sirupsen/logrus"
 	"os"
 	"sort"
 	"strconv"
@@ -62,10 +62,6 @@ func (r* MyStringReader) readNumber() (int, error) {
 	return -1, errors.New("number not found")
 }
 
-func (r* MyStringReader) skipOrFailGracefully(expectedRune rune) {
-
-}
-
 func (r* MyStringReader) readClass() int {
 	c, _, err := r.reader.ReadRune()
 	if err != nil {
@@ -93,7 +89,7 @@ func hasNextBand(r* MyStringReader) bool {
 		return true
 	}
 
-	r.reader.UnreadRune()
+	_ = r.reader.UnreadRune()
 	return false
 }
 
@@ -121,15 +117,14 @@ func parseComboText(comboString string) []Entry {
 		}
 
 		mimo, err := r.readNumber()
-		//Log.Debugf("MIMO: %d", mimo)
-
 		countMimo := len(strconv.Itoa(mimo))
 
 		if err != nil || countMimo == 0 {
 			dl.bands = append(dl.bands, b)
 		} else {
 			for i:=0; i < countMimo; i++ {
-					dl.bands = append(dl.bands, b)
+				b.Mimo = mimo
+				dl.bands = append(dl.bands, b)
 			}
 		}
 
@@ -290,9 +285,6 @@ func ParseBandFile(path string) []Entry {
 		for _, e := range ulEntries {
 			finalEntries = append(finalEntries, &UplinkEntry{bands: e.bands})
 		}
-
-
-
 	}
 
 	if err := scanner.Err(); err != nil {
