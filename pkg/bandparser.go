@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"github.com/denysvitali/ca-combos-editor/pkg/readers"
 	"github.com/denysvitali/ca-combos-editor/pkg/types"
-	"github.com/sirupsen/logrus"
 	"os"
 	"sort"
 	"strconv"
@@ -40,17 +39,23 @@ func parseComboText(comboString string) []types.Entry {
 		if err != nil || countMimo == 0 {
 			dl.SetBands(append(dl.Bands(), b))
 		} else {
-			for i:=0; i < countMimo; i++ {
+			for i := 0; i < countMimo; i++ {
+				b.Mimo = mimo
 				dl.SetBands(append(dl.Bands(), b))
 			}
 		}
 
 		ulClass := r.ReadClass()
 		if ulClass > 0 {
+			mimo, err := r.ReadNumber()
+			if err != nil {
+				// No MIMO specified (e.g: 41A4A), setting it to 1
+				mimo = 1
+			}
 			ulBand := types.Band{
 				Band:     band,
 				Class:    ulClass,
-				Antennas: []types.Antenna{},
+				Mimo:     mimo,
 			}
 			ul.SetBands(append(ul.Bands(), ulBand))
 		}
@@ -103,7 +108,6 @@ func ParseBandDLULFile(downlink string, uplink string) []types.Entry {
 
 		sort.Sort(sort.StringSlice(ulBands))
 
-
 		if len(ulBands) > 0 && ulText != "" {
 			for _, bText := range ulBands {
 				ulEntry := types.UplinkEntry{}
@@ -124,15 +128,15 @@ func parseSingleBand(text string) types.Band {
 
 	bandNumber, err := r.ReadNumber()
 	if err != nil {
-		logrus.Fatal(err)
+		Log.Fatal(err)
 	}
 
 	bandClass := r.ReadClass()
 	if bandClass == -1 {
-		logrus.Fatal("invalid band class")
+		Log.Fatal("invalid band class")
 	}
 
-	return types.Band{Band:bandNumber, Class: bandClass}
+	return types.Band{Band: bandNumber, Class: bandClass}
 }
 
 func ParseBandFile(path string) []types.Entry {
@@ -144,7 +148,6 @@ func ParseBandFile(path string) []types.Entry {
 
 	var finalEntries []types.Entry
 	var finalEntriesHM = make(map[string][]types.Entry)
-
 
 	scanner := bufio.NewScanner(comboFile)
 	for scanner.Scan() {

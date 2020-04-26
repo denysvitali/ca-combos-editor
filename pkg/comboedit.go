@@ -19,9 +19,18 @@ type ComboEdit struct {
 	FileContent []byte
 }
 
+type ComboWriterMode int
+
+//go:generate stringer -type=ComboWriterMode
+const (
+	COMBOWRITER_137_138 ComboWriterMode = 137
+	COMBOWRITER_201_202 ComboWriterMode = 201
+)
+
 type ComboWriter struct {
 	FileBody      []byte
 	EntriesLength int
+	Mode          ComboWriterMode
 }
 
 func NewComboEdit(input []byte) ComboEdit {
@@ -32,7 +41,6 @@ type ComboFile struct {
 	EntriesLen uint16
 	Entries    []types.Entry
 }
-
 
 func (c *ComboEdit) Parse() ComboFile {
 	r := readers.NewMyReader(bytes.NewReader(c.FileContent))
@@ -86,16 +94,19 @@ func ReadComboFile(path string) {
 	cf := ce.Parse()
 
 	for _, e := range cf.Entries {
-		fmt.Printf("Entry %s: %v\n", e.Name(), e)
+		fmt.Printf("%s: %v\n", e.Name(), e)
 	}
 }
 
-func WriteComboFile(entries []types.Entry, path string) {
+
+func WriteComboFile(entries []types.Entry, mode ComboWriterMode, path string) {
 	w := ComboWriter{}
+	w.SetMode(mode)
 
 	f, err := os.Create(path)
 	if err != nil {
 		Log.Fatalf("unable to open file \"%s\" for writing", path)
+		return
 	}
 	defer f.Close()
 	_, err = f.Write(w.Write(entries))
@@ -128,39 +139,59 @@ func (c *ComboEdit) parseEntry(r *readers.BinaryReader) types.Entry {
 	return e
 }
 
-func (c *ComboWriter) writeEntry(entry types.Entry) {
+func (w *ComboWriter) writeEntry(entry types.Entry) {
 	switch entry.(type) {
 	case *types.DownlinkEntry:
-		c.FileBody = append(c.FileBody, byte(137))
-		c.FileBody = append(c.FileBody, 0)
+		switch w.Mode {
+		case COMBOWRITER_137_138:
+			w.FileBody = append(w.FileBody, byte(137))
+		case COMBOWRITER_201_202:
+			w.FileBody = append(w.FileBody, byte(201))
+		}
+		w.FileBody = append(w.FileBody, 0)
 		sortedBands := entry.Bands()
 		sort.Sort(types.BandArr(sortedBands))
 
-		for i := len(sortedBands)/2-1; i >= 0; i-- {
-			opp := len(sortedBands)-1-i
+		for i := len(sortedBands)/2 - 1; i >= 0; i-- {
+			opp := len(sortedBands) - 1 - i
 			sortedBands[i], sortedBands[opp] = sortedBands[opp], sortedBands[i]
 		}
 
-		c.writeBands(sortedBands)
+		w.writeBands(sortedBands)
 
 	case *types.UplinkEntry:
-		c.FileBody = append(c.FileBody, byte(138))
-		c.FileBody = append(c.FileBody, 0)
-
-		c.writeBands(entry.Bands())
+		switch w.Mode {
+		case COMBOWRITER_137_138:
+			w.FileBody = append(w.FileBody, byte(138))
+		case COMBOWRITER_201_202:
+			w.FileBody = append(w.FileBody, byte(202))
+		}
+		w.FileBody = append(w.FileBody, 0)
+		w.writeBands(entry.Bands())
 	}
 }
 
-func (c *ComboWriter) writeBands(bands []types.Band) {
+func (w *ComboWriter) writeBands(bands []types.Band) {
 	for i := 0; i < 6; i++ {
 		if i < len(bands) {
-			c.FileBody = append(c.FileBody, byte(int8(bands[i].Band)))
-			c.FileBody = append(c.FileBody, 0x00)
-			c.FileBody = append(c.FileBody, byte(int8(bands[i].Class)))
+			w.FileBody = append(w.FileBody, byte(bands[i].Band))
+			w.FileBody = append(w.FileBody, 0x00)
+			w.FileBody = append(w.FileBody, byte(bands[i].Class))
+
+			if w.Mode == COMBOWRITER_201_202 {
+				w.FileBody = append(w.FileBody, byte(bands[i].Mimo))
+			}
 		} else {
-			c.FileBody = append(c.FileBody, 0x00)
-			c.FileBody = append(c.FileBody, 0x00)
-			c.FileBody = append(c.FileBody, 0x00)
+			w.FileBody = append(w.FileBody, 0x00)
+			w.FileBody = append(w.FileBody, 0x00)
+			w.FileBody = append(w.FileBody, 0x00)
+			if w.Mode == COMBOWRITER_201_202 {
+				w.FileBody = append(w.FileBody, 0x00)
+			}
 		}
 	}
+}
+
+func (w *ComboWriter) SetMode(mode ComboWriterMode) {
+	w.Mode = mode
 }

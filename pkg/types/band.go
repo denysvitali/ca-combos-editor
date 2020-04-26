@@ -16,7 +16,11 @@ func (b Band) String() string {
 	if b.Band < 1 || b.Band > 255 || b.Class < 1 || b.Class > 9 {
 		return ""
 	}
-	return fmt.Sprintf("%d%s", b.Band, bandClasses[b.Class-1])
+	mimoString := ""
+	if b.Mimo > 1 {
+		mimoString = fmt.Sprintf("%d", b.Mimo)
+	}
+	return fmt.Sprintf("%d%s%s", b.Band, bandClasses[b.Class-1], mimoString)
 }
 
 type BandArr []Band

@@ -21,10 +21,10 @@ go run cmd/main.go -h
 
 ## Usage
 
-### Parse 00028774's content
+### Parse 00028874's content
 1. Extract it:
 ```
-zlib-flate --uncompress < 00028774 > extracted.bin
+zlib-flate --uncompress < 00028874 > extracted.bin
 ```
 
 2. Parse it:
@@ -32,12 +32,12 @@ zlib-flate --uncompress < 00028774 > extracted.bin
 go run cmd/main.go parse extracted.bin
 ```
 
-### Create a 00028774 file based on a band file
+### Create a 00028874 file based on a band file
   
 1. Provide a bands.txt file in the format shown in `test/resources/2019-10-17/bands.txt` (one combo per line)  
-2. `go run cmd/main.go create bands.txt 00028774_uncompressed`
-3. Compress it: `./compress.sh 00028774_uncompressed`
-4. Write the new 00028774 file to your modem
+2. `go run cmd/main.go create bands.txt 00028874_uncompressed`
+3. Compress it: `./compress.sh 00028874_uncompressed`
+4. Write the new 00028874 file to your modem
 
 ### Create a 00028874 file based on a Downlink file and an Uplink file
 Given two files, _downlink.txt_ and _uplink.txt_, containing a list of
