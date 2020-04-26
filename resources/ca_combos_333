@@ -1,0 +1,59 @@
+struct Header {
+    char padding[2] <bgcolor=0xF4A903>;
+    unsigned short entries;
+};
+
+typedef struct {
+    unsigned short band;
+    char class;
+    char antennas[8];
+} Band;
+
+typedef struct {
+    unsigned short type <bgcolor=0xFF0000>;
+    local string type_str = "";
+    Band bands[6] <optimize=false>;
+} Entry;
+
+struct CACombos{
+    Header header;
+    Entry entries[header.entries] <optimize=false>;
+} caCombos;
+
+local int i;
+local int j;
+local int k;
+local string entryType;
+local char ant;
+
+for(i=0; i<caCombos.header.entries; i++){
+    switch(caCombos.entries[i].type){
+        case 333:
+            entryType = "DL";
+            break;
+        case 334:
+            entryType = "UL";
+            break;
+        default:
+            Printf("invalid type %d\n", caCombos.entries[i].type);
+    }
+
+    Printf("Entry (%d) %s: \n\t", i, entryType);
+    for(j=0; j<6;j++){
+        if(caCombos.entries[i].bands[j].band == 0){
+            break;
+        }
+        if(j != 0){
+            Printf("-");
+        }
+        Printf("%d%c", caCombos.entries[i].bands[j].band,
+            caCombos.entries[i].bands[j].class + 'A' - 1);
+        for(k=0; k<8; k++){
+            ant = caCombos.entries[i].bands[j].antennas[k];
+            if(ant != 0){
+                Printf("(%d)", ant);
+            }
+        }
+    }
+    Printf("\n");
+}

@@ -2,7 +2,8 @@ package pkg
 
 import (
 	"bufio"
-	"github.com/Sirupsen/logrus"
+	"github.com/denysvitali/ca-combos-editor/pkg/types"
+	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"log"
 	"testing"
@@ -33,7 +34,7 @@ func TestParseCombo2(t *testing.T) {
 
 	assert.Equal(t,2, len(entries))
 
-	dlEntry, ok := entries[0].(*DownlinkEntry)
+	dlEntry, ok := entries[0].(*types.DownlinkEntry)
 	assert.True(t, ok)
 
 	bands := dlEntry.Bands()
@@ -47,7 +48,7 @@ func TestParseCombo2(t *testing.T) {
 	assert.Equal(t, 3, secondBand.Band)
 	assert.Equal(t, 3, secondBand.Class) // C
 
-	ulEntry, ok := entries[1].(*UplinkEntry)
+	ulEntry, ok := entries[1].(*types.UplinkEntry)
 	assert.True(t, ok)
 
 	thirdBand := ulEntry.Bands()[0]

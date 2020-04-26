@@ -1,9 +1,9 @@
 package main
 
 import (
-	"github.com/Sirupsen/logrus"
 	"github.com/alexflint/go-arg"
 	"github.com/denysvitali/ca-combos-editor/pkg"
+	"github.com/sirupsen/logrus"
 )
 
 type CreateCmd struct {

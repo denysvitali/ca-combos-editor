@@ -2,154 +2,66 @@ package pkg
 
 import (
 	"bufio"
-	"errors"
-	"github.com/Sirupsen/logrus"
+	"github.com/denysvitali/ca-combos-editor/pkg/readers"
+	"github.com/denysvitali/ca-combos-editor/pkg/types"
+	"github.com/sirupsen/logrus"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
-	"unicode"
 )
 
-type MyStringReader struct {
-	reader *strings.Reader
-}
-
-func NewMyStringReader(string string) MyStringReader{
-	return MyStringReader{reader: strings.NewReader(string)}
-}
-
-func (r* MyStringReader) NextRune() rune {
-	ch, _, error := r.reader.ReadRune()
-	if error != nil {
-		Log.Fatalf("Unable to get next rune: %s", error)
-	}
-
-	return ch
-}
-
-func (r* MyStringReader) GoBack() {
-	_ = r.reader.UnreadRune()
-}
-
-func (r* MyStringReader) readNumber() (int, error) {
-	var numberRunes []rune
-	c, _, err := r.reader.ReadRune()
-	if err != nil {
-		return -1, err
-	}
-	for unicode.IsNumber(c) {
-		numberRunes = append(numberRunes, c)
-		c, _, err = r.reader.ReadRune()
-		if err != nil {
-			break
-		}
-	}
-
-	if err == nil {
-		r.GoBack()
-	}
-
-	if len(numberRunes) > 0 {
-		number, err := strconv.Atoi(string(numberRunes))
-		if err != nil {
-			return -1, err
-		}
-
-		return number, nil
-	}
-
-	return -1, errors.New("number not found")
-}
-
-func (r* MyStringReader) skipOrFailGracefully(expectedRune rune) {
-
-}
-
-func (r* MyStringReader) readClass() int {
-	c, _, err := r.reader.ReadRune()
-	if err != nil {
-		return -1
-	}
-	classes := "ABCD"
-
-	classIndex := strings.Index(classes, string(c))
-
-	if classIndex == -1 {
-		r.GoBack()
-		return -1
-	}
-
-	return  classIndex + 1
-}
-
-func hasNextBand(r* MyStringReader) bool {
-	ch, _, err := r.reader.ReadRune()
-	if err != nil {
-		return false
-	}
-
-	if ch == rune('-') {
-		return true
-	}
-
-	r.reader.UnreadRune()
-	return false
-}
-
-func parseComboText(comboString string) []Entry {
+func parseComboText(comboString string) []types.Entry {
 	Log.Debugf("comboString: %s", comboString)
-	r := NewMyStringReader(comboString)
+	r := readers.NewComboReader(comboString)
 
-	var entries []Entry
-	dl := DownlinkEntry{}
-	ul := UplinkEntry{}
+	var entries []types.Entry
+	dl := types.DownlinkEntry{}
+	ul := types.UplinkEntry{}
 
 	cont := true
 	for cont {
-		band, err := r.readNumber()
+		band, err := r.ReadNumber()
 		if err != nil {
 			break
 		}
 
-		b := Band{}
+		b := types.Band{}
 		b.Band = band
-		b.Class = r.readClass()
+		b.Class = r.ReadClass()
 
 		if b.Class == -1 {
 			break
 		}
 
-		mimo, err := r.readNumber()
-		//Log.Debugf("MIMO: %d", mimo)
-
+		mimo, err := r.ReadNumber()
 		countMimo := len(strconv.Itoa(mimo))
 
 		if err != nil || countMimo == 0 {
-			dl.bands = append(dl.bands, b)
+			dl.SetBands(append(dl.Bands(), b))
 		} else {
 			for i:=0; i < countMimo; i++ {
-					dl.bands = append(dl.bands, b)
+				dl.SetBands(append(dl.Bands(), b))
 			}
 		}
 
-		ulClass := r.readClass()
+		ulClass := r.ReadClass()
 		if ulClass > 0 {
-			ulBand := Band{
-				band,
-				ulClass,
-				0,
+			ulBand := types.Band{
+				Band:     band,
+				Class:    ulClass,
+				Antennas: []types.Antenna{},
 			}
-			ul.bands = append(ul.bands, ulBand)
+			ul.SetBands(append(ul.Bands(), ulBand))
 		}
 
-		cont = hasNextBand(&r)
+		cont = readers.HasNextBand(&r)
 	}
 
 	entries = append(entries, &dl)
 	entries = append(entries, &ul)
 
-	if len(ul.bands) > 1 {
+	if len(ul.Bands()) > 1 {
 		Log.Warnf("UL => %v", ul)
 		return nil
 	}
@@ -158,7 +70,7 @@ func parseComboText(comboString string) []Entry {
 	return entries
 }
 
-func ParseBandDLULFile(downlink string, uplink string) []Entry {
+func ParseBandDLULFile(downlink string, uplink string) []types.Entry {
 	dlFile, err := os.Open(downlink)
 	if err != nil {
 		Log.Fatal(err)
@@ -171,7 +83,7 @@ func ParseBandDLULFile(downlink string, uplink string) []Entry {
 	defer dlFile.Close()
 	defer ulFile.Close()
 
-	var finalEntries []Entry
+	var finalEntries []types.Entry
 
 	dlScanner := bufio.NewScanner(dlFile)
 	ulScanner := bufio.NewScanner(ulFile)
@@ -187,14 +99,16 @@ func ParseBandDLULFile(downlink string, uplink string) []Entry {
 
 		entry := parseComboText(dlText)[0]
 		ulBands := strings.Split(ulText, ", ")
-		var ulEntries []Entry
+		var ulEntries []types.Entry
 
 		sort.Sort(sort.StringSlice(ulBands))
 
 
 		if len(ulBands) > 0 && ulText != "" {
 			for _, bText := range ulBands {
-				ulEntries = append(ulEntries, &UplinkEntry{bands: []Band{parseSingleBand(bText)}})
+				ulEntry := types.UplinkEntry{}
+				ulEntry.SetBands([]types.Band{parseSingleBand(bText)})
+				ulEntries = append(ulEntries, &ulEntry)
 			}
 		}
 
@@ -205,31 +119,31 @@ func ParseBandDLULFile(downlink string, uplink string) []Entry {
 	return finalEntries
 }
 
-func parseSingleBand(text string) Band {
-	r := NewMyStringReader(text)
+func parseSingleBand(text string) types.Band {
+	r := readers.NewComboReader(text)
 
-	bandNumber, err := r.readNumber()
+	bandNumber, err := r.ReadNumber()
 	if err != nil {
 		logrus.Fatal(err)
 	}
 
-	bandClass := r.readClass()
+	bandClass := r.ReadClass()
 	if bandClass == -1 {
 		logrus.Fatal("invalid band class")
 	}
 
-	return Band{Band:bandNumber, Class: bandClass}
+	return types.Band{Band:bandNumber, Class: bandClass}
 }
 
-func ParseBandFile(path string) []Entry {
+func ParseBandFile(path string) []types.Entry {
 	comboFile, err := os.Open(path)
 	if err != nil {
 		Log.Fatal(err)
 	}
 	defer comboFile.Close()
 
-	var finalEntries []Entry
-	var finalEntriesHM = make(map[string][]Entry)
+	var finalEntries []types.Entry
+	var finalEntriesHM = make(map[string][]types.Entry)
 
 
 	scanner := bufio.NewScanner(comboFile)
@@ -270,29 +184,30 @@ func ParseBandFile(path string) []Entry {
 	}
 
 	for _, v := range finalEntriesHM {
-		var dlEntries []DownlinkEntry
-		var ulEntries []UplinkEntry
+		var dlEntries []types.DownlinkEntry
+		var ulEntries []types.UplinkEntry
 
 		for _, e := range v {
 			switch e := e.(type) {
-			case *DownlinkEntry:
+			case *types.DownlinkEntry:
 				dlEntries = append(dlEntries, *e)
-			case *UplinkEntry:
+			case *types.UplinkEntry:
 				ulEntries = append(ulEntries, *e)
 			}
 		}
-		sort.Sort(UlArr(ulEntries))
+		sort.Sort(types.UlArr(ulEntries))
 
 		for _, e := range dlEntries {
-			finalEntries = append(finalEntries, &DownlinkEntry{bands: e.bands})
+			dlEntry := types.DownlinkEntry{}
+			dlEntry.SetBands(e.Bands())
+			finalEntries = append(finalEntries, &dlEntry)
 		}
 
 		for _, e := range ulEntries {
-			finalEntries = append(finalEntries, &UplinkEntry{bands: e.bands})
+			ulEntry := types.UplinkEntry{}
+			ulEntry.SetBands(e.Bands())
+			finalEntries = append(finalEntries, &ulEntry)
 		}
-
-
-
 	}
 
 	if err := scanner.Err(); err != nil {
