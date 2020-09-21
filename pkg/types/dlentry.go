@@ -6,7 +6,7 @@ import (
 )
 
 type DownlinkEntry struct {
-	bands []Band
+	BandArr []Band
 }
 
 func (d *DownlinkEntry) Name() string {
@@ -14,14 +14,14 @@ func (d *DownlinkEntry) Name() string {
 }
 
 func (d *DownlinkEntry) Bands() []Band {
-	return d.bands
+	return d.BandArr
 }
 
 func (d *DownlinkEntry) String() string {
-	sort.Sort(BandArr(d.bands))
+	sort.Sort(BandArr(d.BandArr))
 	var bands []string
 
-	for _, b := range d.bands {
+	for _, b := range d.BandArr {
 		bands = append(bands, b.String())
 	}
 
@@ -29,6 +29,6 @@ func (d *DownlinkEntry) String() string {
 }
 
 func (d *DownlinkEntry) SetBands(bands []Band) {
-	d.bands = bands
+	d.BandArr = bands
 }
 type DlArr []DownlinkEntry

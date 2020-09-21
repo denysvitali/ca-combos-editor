@@ -6,11 +6,11 @@ import (
 )
 
 type UplinkEntry struct {
-	bands []Band
+	BandArr []Band
 }
 
 func (u *UplinkEntry) Bands() []Band {
-	return u.bands
+	return u.BandArr
 }
 
 func (u *UplinkEntry) Name() string {
@@ -18,10 +18,10 @@ func (u *UplinkEntry) Name() string {
 }
 
 func (u *UplinkEntry) String() string {
-	sort.Sort(BandArr(u.bands))
+	sort.Sort(BandArr(u.BandArr))
 	var bands []string
 
-	for _, b := range u.bands {
+	for _, b := range u.BandArr {
 		bands = append(bands, b.String())
 	}
 
@@ -29,7 +29,7 @@ func (u *UplinkEntry) String() string {
 }
 
 func (u *UplinkEntry) SetBands(bands []Band){
-	u.bands = bands
+	u.BandArr = bands
 }
 
 type UlArr []UplinkEntry
@@ -39,7 +39,13 @@ func (u UlArr) Len() int {
 }
 
 func (u UlArr) Less(i, j int) bool {
-	return u[i].bands[0].Band < u[j].bands[0].Band;
+	if len(u[i].BandArr) == 0 {
+		return false
+	}
+	if len(u[j].BandArr) == 0 {
+		return true
+	}
+	return u[i].BandArr[0].Band < u[j].BandArr[0].Band
 }
 
 func (u UlArr) Swap(i, j int) {

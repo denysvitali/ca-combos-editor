@@ -17,9 +17,9 @@ func NewComboReader(string string) ComboReader {
 }
 
 func (r*ComboReader) NextRune() rune {
-	ch, _, error := r.reader.ReadRune()
-	if error != nil {
-		logrus.Fatalf("Unable to get next rune: %s", error)
+	ch, _, err := r.reader.ReadRune()
+	if err != nil {
+		logrus.Fatalf("Unable to get next rune: %s", err)
 	}
 
 	return ch
@@ -68,7 +68,7 @@ func (r*ComboReader) ReadClass() int {
 	if err != nil {
 		return -1
 	}
-	classes := "ABCD"
+	classes := "ABCDE"
 
 	classIndex := strings.Index(classes, string(c))
 

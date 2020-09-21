@@ -23,16 +23,16 @@ func TestParseComboMIMO(t *testing.T) {
 	logrus.SetLevel(logrus.DebugLevel)
 	entries := parseComboText(comboString)
 
-	b1 := types.Band {
+	b1 := types.Band{
 		Band:  1,
 		Class: 1,
 		Mimo:  4,
 	}
 
-	b1_2 := types.Band {
-		Band: 1,
+	b1_2 := types.Band{
+		Band:  1,
 		Class: 1,
-		Mimo: 1,
+		Mimo:  1,
 	}
 	assert.Equal(t, []types.Band{b1, b1}, entries[0].Bands())
 	assert.Equal(t, []types.Band{b1_2}, entries[1].Bands())
@@ -45,31 +45,31 @@ func TestParseComplexCombo(t *testing.T) {
 	entries := parseComboText("41A4A-28A2-3A2")
 
 	b1 := types.Band{
-		Band: 41,
-		Mimo: 4,
+		Band:  41,
+		Mimo:  4,
 		Class: 1,
 	}
 
 	b1_2 := types.Band{
-		Band: 41,
-		Mimo: 1,
+		Band:  41,
+		Mimo:  1,
 		Class: 1,
 	}
 
-	b2 := types.Band {
-		Band: 28,
+	b2 := types.Band{
+		Band:  28,
 		Class: 1,
-		Mimo: 2,
+		Mimo:  2,
 	}
 
 	b3 := types.Band{
-		Band: 3,
+		Band:  3,
 		Class: 1,
-		Mimo: 2,
+		Mimo:  2,
 	}
 
 	assert.Equal(t, entries[0].Bands(), []types.Band{b1, b2, b3}) // DL
-	assert.Equal(t, entries[1].Bands(), []types.Band{b1_2}) // UL
+	assert.Equal(t, entries[1].Bands(), []types.Band{b1_2})       // UL
 
 	log.Printf("Entries: %v", entries)
 }
@@ -122,4 +122,24 @@ func Readln(r *bufio.Reader) (string, error) {
 func TestParseFile(t *testing.T) {
 	Log.Level = logrus.DebugLevel
 	ParseBandFile("../test/resources/2019-10-17/bands.txt")
+}
+
+func TestParseBand1(t *testing.T) {
+	comboString := "2A2A-46E2-48C2"
+	Log.Level = logrus.DebugLevel
+	entries := parseComboText(comboString)
+
+	assert.NotNil(t, entries)
+	assert.Equal(t, &types.DownlinkEntry{
+		BandArr: []types.Band{
+			{Band: 48, Class: 3, Mimo:  2},
+			{Band: 46, Class: 5, Mimo: 2},
+			{Band: 2, Class: 1, Mimo: 2},
+		},
+	}, entries[0])
+	assert.Equal(t, &types.UplinkEntry{
+		BandArr: []types.Band{
+			{Band: 2, Class: 1, Mimo: 1},
+		},
+	}, entries[1])
 }
