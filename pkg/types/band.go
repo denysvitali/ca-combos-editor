@@ -25,11 +25,17 @@ func (b Band) String() string {
 	return fmt.Sprintf("%d%s%s", b.Band, bandClasses[b.Class-1], mimoString)
 }
 
-// BandArr sorts bands in descending order by band number, then by class.
+// BandArr is a slice of bands that sorts in descending order by band number,
+// then by class. It implements sort.Interface.
 type BandArr []Band
 
-func (b BandArr) Len() int      { return len(b) }
+// Len returns the number of bands in the slice.
+func (b BandArr) Len() int { return len(b) }
+
+// Swap exchanges the elements at indices i and j.
 func (b BandArr) Swap(i, j int) { b[i], b[j] = b[j], b[i] }
+
+// Less reports whether the band at index i should sort before the band at index j.
 func (b BandArr) Less(i, j int) bool {
 	if b[i].Band == b[j].Band {
 		return b[i].Class > b[j].Class

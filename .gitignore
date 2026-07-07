@@ -3,3 +3,7 @@
 /main
 /extracted
 /output
+coverage.out
+*.exe
+*.test
+/ca-combos-editor

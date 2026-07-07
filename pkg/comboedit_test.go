@@ -95,6 +95,36 @@ func TestComboEditRoundTrip(t *testing.T) {
 	}
 }
 
+func TestComboEditRoundTripAntennaMode(t *testing.T) {
+	cf := ComboFile{
+		EntriesLen: 2,
+		Entries: []types.Entry{
+			&types.DownlinkEntry{
+				BandArr: []types.Band{
+					{Band: 3, Class: 1, Antennas: []types.Antenna{1, 2}},
+					{Band: 7, Class: 2, Antennas: []types.Antenna{1, 2, 4}},
+				},
+			},
+			&types.UplinkEntry{
+				BandArr: []types.Band{
+					{Band: 1, Class: 1, Antennas: []types.Antenna{1}},
+					{Band: 20, Class: 1, Antennas: []types.Antenna{2, 4}},
+				},
+			},
+		},
+	}
+
+	w := ComboWriter{Mode: COMBOWRITER_333_334}
+	serialized := w.Write(cf.Entries)
+
+	ce := NewComboEdit(serialized)
+	cf2, err := ce.Parse()
+	require.NoError(t, err)
+
+	assert.Equal(t, len(cf.Entries), len(cf2.Entries))
+	assert.Equal(t, normalizeEntries(cf.Entries), normalizeEntries(cf2.Entries))
+}
+
 func TestComboEditParseInvalidHeader(t *testing.T) {
 	ce := NewComboEdit([]byte{0x01, 0x00, 0x00, 0x00})
 	_, err := ce.Parse()
