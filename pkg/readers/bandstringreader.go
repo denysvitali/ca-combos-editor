@@ -16,7 +16,7 @@ func NewComboReader(string string) ComboReader {
 	return ComboReader{reader: strings.NewReader(string)}
 }
 
-func (r*ComboReader) NextRune() rune {
+func (r *ComboReader) NextRune() rune {
 	ch, _, err := r.reader.ReadRune()
 	if err != nil {
 		logrus.Fatalf("Unable to get next rune: %s", err)
@@ -25,11 +25,11 @@ func (r*ComboReader) NextRune() rune {
 	return ch
 }
 
-func (r*ComboReader) GoBack() {
+func (r *ComboReader) GoBack() {
 	_ = r.reader.UnreadRune()
 }
 
-func (r*ComboReader) ReadNumber() (int, error) {
+func (r *ComboReader) ReadNumber() (int, error) {
 	var numberRunes []rune
 	c, _, err := r.reader.ReadRune()
 	if err != nil {
@@ -59,11 +59,11 @@ func (r*ComboReader) ReadNumber() (int, error) {
 	return -1, errors.New("number not found")
 }
 
-func (r*ComboReader) skipOrFailGracefully(expectedRune rune) {
+func (r *ComboReader) skipOrFailGracefully(expectedRune rune) {
 
 }
 
-func (r*ComboReader) ReadClass() int {
+func (r *ComboReader) ReadClass() int {
 	c, _, err := r.reader.ReadRune()
 	if err != nil {
 		return -1
@@ -77,10 +77,10 @@ func (r*ComboReader) ReadClass() int {
 		return -1
 	}
 
-	return  classIndex + 1
+	return classIndex + 1
 }
 
-func HasNextBand(r*ComboReader) bool {
+func HasNextBand(r *ComboReader) bool {
 	ch, _, err := r.reader.ReadRune()
 	if err != nil {
 		return false
@@ -92,4 +92,3 @@ func HasNextBand(r*ComboReader) bool {
 	_ = r.reader.UnreadRune()
 	return false
 }
-

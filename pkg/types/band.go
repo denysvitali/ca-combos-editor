@@ -24,6 +24,7 @@ func (b Band) String() string {
 }
 
 type BandArr []Band
+
 func (b BandArr) Len() int {
 	return len(b)
 }

@@ -28,7 +28,7 @@ func (u *UplinkEntry) String() string {
 	return strings.Join(bands, "-")
 }
 
-func (u *UplinkEntry) SetBands(bands []Band){
+func (u *UplinkEntry) SetBands(bands []Band) {
 	u.BandArr = bands
 }
 

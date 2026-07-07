@@ -98,7 +98,6 @@ func ReadComboFile(path string) {
 	}
 }
 
-
 func WriteComboFile(entries []types.Entry, mode ComboWriterMode, path string) {
 	w := ComboWriter{}
 	w.SetMode(mode)

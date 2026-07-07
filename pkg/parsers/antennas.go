@@ -7,7 +7,7 @@ import (
 
 func ParseAntennas(r *readers.BinaryReader) []types.Antenna {
 	var antennas []types.Antenna
-	for i := 0; i<8; i++ {
+	for i := 0; i < 8; i++ {
 		antennaEntry := types.Antenna(r.Rb())
 		if antennaEntry != 0 {
 			antennas = append(antennas, antennaEntry)

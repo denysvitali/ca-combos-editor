@@ -31,4 +31,5 @@ func (d *DownlinkEntry) String() string {
 func (d *DownlinkEntry) SetBands(bands []Band) {
 	d.BandArr = bands
 }
+
 type DlArr []DownlinkEntry

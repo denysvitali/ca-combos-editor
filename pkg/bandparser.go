@@ -53,9 +53,9 @@ func parseComboText(comboString string) []types.Entry {
 				mimo = 1
 			}
 			ulBand := types.Band{
-				Band:     band,
-				Class:    ulClass,
-				Mimo:     mimo,
+				Band:  band,
+				Class: ulClass,
+				Mimo:  mimo,
 			}
 			ul.SetBands(append(ul.Bands(), ulBand))
 		}

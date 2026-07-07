@@ -132,7 +132,7 @@ func TestParseBand1(t *testing.T) {
 	assert.NotNil(t, entries)
 	assert.Equal(t, &types.DownlinkEntry{
 		BandArr: []types.Band{
-			{Band: 48, Class: 3, Mimo:  2},
+			{Band: 48, Class: 3, Mimo: 2},
 			{Band: 46, Class: 5, Mimo: 2},
 			{Band: 2, Class: 1, Mimo: 2},
 		},
