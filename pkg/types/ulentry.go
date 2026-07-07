@@ -1,10 +1,5 @@
 package types
 
-import (
-	"sort"
-	"strings"
-)
-
 // UplinkEntry is an uplink carrier aggregation combo record.
 type UplinkEntry struct {
 	BandArr []Band

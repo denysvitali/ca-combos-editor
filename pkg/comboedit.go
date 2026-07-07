@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"sort"
 
 	"github.com/denysvitali/ca-combos-editor/pkg/parsers"
 	"github.com/denysvitali/ca-combos-editor/pkg/readers"

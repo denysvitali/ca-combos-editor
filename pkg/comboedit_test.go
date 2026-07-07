@@ -2,7 +2,6 @@ package pkg
 
 import (
 	"os"
-	"sort"
 	"testing"
 
 	"github.com/denysvitali/ca-combos-editor/pkg/types"
@@ -143,7 +142,7 @@ func normalizeEntries(entries []types.Entry) []types.Entry {
 	normalized := make([]types.Entry, len(entries))
 	for i, e := range entries {
 		switch e := e.(type) {
-		(case *types.DownlinkEntry:
+		case *types.DownlinkEntry:
 			bands := make([]types.Band, len(e.Bands()))
 			copy(bands, e.Bands())
 			types.SortBandsAsc(bands)
