@@ -23,7 +23,7 @@ func TestBinaryReader_Rb(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := NewMyReader(bytes.NewReader(tt.input))
+			r := NewBinaryReader(bytes.NewReader(tt.input))
 			got, err := r.Rb()
 			if tt.wantErr {
 				require.Error(t, err)
@@ -62,7 +62,7 @@ func TestBinaryReader_ReadBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := NewMyReader(bytes.NewReader(tt.input))
+			r := NewBinaryReader(bytes.NewReader(tt.input))
 			got, err := r.ReadBytes(tt.n)
 			if tt.wantErr {
 				require.Error(t, err)
@@ -88,7 +88,7 @@ func TestBinaryReader_Expect(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := NewMyReader(bytes.NewReader(tt.input))
+			r := NewBinaryReader(bytes.NewReader(tt.input))
 			err := r.Expect(tt.expect)
 			if tt.wantErr {
 				require.Error(t, err)

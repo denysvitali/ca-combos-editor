@@ -12,8 +12,16 @@ type BinaryReader struct {
 	reader *bytes.Reader
 }
 
-func NewMyReader(reader *bytes.Reader) BinaryReader {
+// NewBinaryReader creates a BinaryReader backed by the provided bytes.Reader.
+func NewBinaryReader(reader *bytes.Reader) BinaryReader {
 	return BinaryReader{reader: reader}
+}
+
+// NewMyReader is a deprecated alias for NewBinaryReader.
+//
+// Deprecated: use NewBinaryReader instead.
+func NewMyReader(reader *bytes.Reader) BinaryReader {
+	return NewBinaryReader(reader)
 }
 
 // Rb reads the next byte or returns an error on EOF.
