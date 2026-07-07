@@ -129,14 +129,16 @@ The editor maintains a specific order when writing entries to the binary format 
 
 #### 6.1 Downlink Bands
 
-Inside a downlink entry, bands are sorted **before serialization** by the writer so that:
+The writer preserves the order in which bands are supplied; it does not reorder them before serialization. Device-extracted fixtures store bands in a variety of orders (some ascending, some descending), so preserving the input order is the only behaviour that round-trips every observed payload byte-for-byte.
+
+The text renderer sorts bands for display using the following descending rule:
 
 - The band number is in descending order (highest band first).
 - If two bands share the same number, the class is in descending order (largest class first).
 
-For example, the human-readable text `1A4-3A2` becomes `3A2-1A4` when serialized, because 3 > 1. The band `2A2-46E2-48C2` is reordered to `48C2-46E2-2A2` (48, 46, 2).
+For example, a downlink entry whose binary bands are `[1A, 3A]` is rendered as `3A-1A`. A line like `2A2-46E2-48C2` is rendered as `48C2-46E2-2A2` (48, 46, 2).
 
-The text rendering also sorts using the same descending rule, so the output order matches the binary order.
+Because the binary order is preserved while the display order is sorted, the rendered text may not match the on-disk band order.
 
 #### 6.2 Uplink Entries
 
@@ -164,7 +166,7 @@ The files under `test/resources/` show the following consistent patterns:
 - **Entry-type families are not mixed.** Each fixture uses exactly one pair of entry types: either 137/138, 201/202, or (in the 010 Editor template) 333/334. A real 00028874 file never interleaves families.
 - **DL-then-UL grouping.** Within a family, every downlink entry is followed immediately by one or more uplink entries. Some downlinks have a single uplink; others have several (e.g., the 2019-11-26 fixtures show `[201, 202, 202]` blocks).
 - **Zlib wrapper.** Every compressed fixture begins with the two-byte zlib header `78 9c`. This means CMF = `0x78` (deflate, 32 KiB window) and FLG = `0x9c` (FLEVEL = `10`, i.e., default compression, no preset dictionary). The FLEVEL value matches the zlib level 6 used by the compressor helper and the `compress.sh` script.
-- **Original payloads are not pre-sorted.** Some device-extracted downlink entries store bands in ascending order (e.g., `1A-5A` or `3A-7C`). The writer normalizes every downlink entry to descending band number, then descending class, before serialization.
+- **Original payloads are not pre-sorted.** Some device-extracted downlink entries store bands in ascending order (e.g., `1A-5A` or `3A-7C`), others in descending order (e.g., `7C2-3A2`). The writer preserves the input order so that every observed fixture round-trips byte-for-byte.
 - **Stable header.** All decompressed payloads start with two zero bytes followed by a little-endian `uint16` entry count.
 
 ### 9. Human-Readable Text Format
