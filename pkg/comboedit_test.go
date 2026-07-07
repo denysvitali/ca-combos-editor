@@ -1,7 +1,9 @@
 package pkg
 
 import (
+	"bytes"
 	"os"
+	"path/filepath"
 	"testing"
 
 	"github.com/denysvitali/ca-combos-editor/pkg/types"
@@ -156,4 +158,59 @@ func normalizeEntries(entries []types.Entry) []types.Entry {
 		}
 	}
 	return normalized
+}
+
+func TestReadComboFile(t *testing.T) {
+	var buf bytes.Buffer
+	err := ReadComboFile("../test/resources/2019-10-17/extracted", &buf)
+	require.NoError(t, err)
+	out := buf.String()
+	assert.Contains(t, out, "DL")
+	assert.Contains(t, out, "UL")
+}
+
+func TestWriteComboFile(t *testing.T) {
+	out := filepath.Join(t.TempDir(), "out.bin")
+	entries, err := ParseBandFile("../test/resources/2019-10-17/bands.txt")
+	require.NoError(t, err)
+
+	require.NoError(t, WriteComboFile(entries, COMBOWRITER_137_138, out))
+	assert.FileExists(t, out)
+
+	written, err := os.ReadFile(out)
+	require.NoError(t, err)
+	assert.NotEmpty(t, written)
+}
+
+func TestSetMode(t *testing.T) {
+	w := ComboWriter{}
+	w.SetMode(COMBOWRITER_201_202)
+	assert.Equal(t, COMBOWRITER_201_202, w.Mode)
+}
+
+func TestComboEditRoundTrip333(t *testing.T) {
+	entries := []types.Entry{
+		&types.DownlinkEntry{BandArr: []types.Band{
+			{Band: 7, Class: 1, Antennas: []types.Antenna{1, 2, 3}},
+		}},
+		&types.UplinkEntry{BandArr: []types.Band{
+			{Band: 7, Class: 1, Antennas: []types.Antenna{1}},
+		}},
+	}
+
+	w := ComboWriter{Mode: COMBOWRITER_333_334}
+	serialized := w.Write(entries)
+
+	ce := NewComboEdit(serialized)
+	cf, err := ce.Parse()
+	require.NoError(t, err)
+	require.Len(t, cf.Entries, 2)
+
+	dl, ok := cf.Entries[0].(*types.DownlinkEntry)
+	require.True(t, ok)
+	assert.Equal(t, []types.Antenna{1, 2, 3}, dl.Bands()[0].Antennas)
+
+	ul, ok := cf.Entries[1].(*types.UplinkEntry)
+	require.True(t, ok)
+	assert.Equal(t, []types.Antenna{1}, ul.Bands()[0].Antennas)
 }

@@ -139,6 +139,22 @@ func TestRootCommandInvalidArgs(t *testing.T) {
 			args: []string{"parse", "a", "b"},
 		},
 		{
+			name: "compress with too few args",
+			args: []string{"compress", "a"},
+		},
+		{
+			name: "compress with too many args",
+			args: []string{"compress", "a", "b", "c"},
+		},
+		{
+			name: "decompress with too few args",
+			args: []string{"decompress", "a"},
+		},
+		{
+			name: "decompress with too many args",
+			args: []string{"decompress", "a", "b", "c"},
+		},
+		{
 			name: "unknown subcommand",
 			args: []string{"unknown"},
 		},
@@ -159,6 +175,71 @@ func TestRootCommandInvalidArgs(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			executeExpectErr(t, tt.args...)
+		})
+	}
+}
+
+func TestCompressDecompress(t *testing.T) {
+	extractedPath := "../test/resources/2019-10-17/extracted"
+	compressedPath := "../test/resources/2019-10-17/00028874"
+	outDir := t.TempDir()
+
+	extractedBytes, err := os.ReadFile(extractedPath)
+	require.NoError(t, err)
+
+	tests := []struct {
+		name string
+		run  func(t *testing.T)
+	}{
+		{
+			name: "compress extracted payload",
+			run: func(t *testing.T) {
+				out := execute(t, "compress", extractedPath, filepath.Join(outDir, "compressed"))
+				assert.Contains(t, out, "wrote")
+				assert.FileExists(t, filepath.Join(outDir, "compressed"))
+			},
+		},
+		{
+			name: "decompress 00028874 payload",
+			run: func(t *testing.T) {
+				out := execute(t, "decompress", compressedPath, filepath.Join(outDir, "decompressed"))
+				assert.Contains(t, out, "wrote")
+				assert.FileExists(t, filepath.Join(outDir, "decompressed"))
+			},
+		},
+		{
+			name: "round-trip compress then decompress matches extracted",
+			run: func(t *testing.T) {
+				compressedOut := filepath.Join(outDir, "roundtrip-compressed")
+				decompressedOut := filepath.Join(outDir, "roundtrip-decompressed")
+
+				out := execute(t, "compress", extractedPath, compressedOut)
+				assert.Contains(t, out, "wrote")
+
+				out = execute(t, "decompress", compressedOut, decompressedOut)
+				assert.Contains(t, out, "wrote")
+
+				got, err := os.ReadFile(decompressedOut)
+				require.NoError(t, err)
+				assert.Equal(t, extractedBytes, got)
+			},
+		},
+		{
+			name: "decompress 00028874 matches extracted",
+			run: func(t *testing.T) {
+				out := execute(t, "decompress", compressedPath, filepath.Join(outDir, "fixture-decompressed"))
+				assert.Contains(t, out, "wrote")
+
+				got, err := os.ReadFile(filepath.Join(outDir, "fixture-decompressed"))
+				require.NoError(t, err)
+				assert.Equal(t, extractedBytes, got)
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.run(t)
 		})
 	}
 }

@@ -171,3 +171,26 @@ func TestComboReader_HasNextBand(t *testing.T) {
 		})
 	}
 }
+
+func TestBinaryReader_Len(t *testing.T) {
+	r := NewBinaryReader(bytes.NewReader([]byte{0x01, 0x02, 0x03}))
+	assert.Equal(t, 3, r.Len())
+	_, _ = r.ReadByte()
+	assert.Equal(t, 2, r.Len())
+}
+
+func TestComboReader_NextRune(t *testing.T) {
+	r := NewComboReader("A")
+	ch, err := r.NextRune()
+	require.NoError(t, err)
+	assert.Equal(t, 'A', ch)
+
+	_, err = r.NextRune()
+	assert.ErrorIs(t, err, io.EOF)
+}
+
+func TestComboReader_Remaining(t *testing.T) {
+	r := NewComboReader("123ABC")
+	_, _ = r.ReadNumber()
+	assert.Equal(t, "ABC", r.Remaining())
+}

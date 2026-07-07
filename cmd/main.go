@@ -8,6 +8,7 @@ import (
 
 	"github.com/charmbracelet/lipgloss"
 	"github.com/denysvitali/ca-combos-editor/pkg"
+	"github.com/denysvitali/ca-combos-editor/pkg/zlib"
 	"github.com/sirupsen/logrus"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -57,6 +58,20 @@ human-readable band descriptions.`,
 		RunE:  runParse,
 	}
 
+	compressCmd = &cobra.Command{
+		Use:   "compress <input> <output>",
+		Short: "Zlib-compress a raw uncompressed payload",
+		Args:  cobra.ExactArgs(2),
+		RunE:  runCompress,
+	}
+
+	decompressCmd = &cobra.Command{
+		Use:   "decompress <input> <output>",
+		Short: "Decompress a 00028874 zlib-compressed file",
+		Args:  cobra.ExactArgs(2),
+		RunE:  runDecompress,
+	}
+
 	styleHeader = lipgloss.NewStyle().
 			Bold(true).
 			Foreground(lipgloss.Color("#7D56F4"))
@@ -82,7 +97,7 @@ func init() {
 	viper.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	viper.AutomaticEnv()
 
-	rootCmd.AddCommand(createCmd, createDlUlCmd, parseCmd)
+	rootCmd.AddCommand(createCmd, createDlUlCmd, parseCmd, compressCmd, decompressCmd)
 }
 
 func initConfig() {
@@ -178,6 +193,50 @@ func runParse(cmd *cobra.Command, args []string) error {
 	if err := pkg.ReadComboFile(input, cmd.OutOrStdout()); err != nil {
 		return fmt.Errorf("read combo file %q: %w", input, err)
 	}
+	return nil
+}
+
+func runCompress(cmd *cobra.Command, args []string) error {
+	input, output := args[0], args[1]
+
+	f, err := os.Open(input)
+	if err != nil {
+		return fmt.Errorf("open input file %q: %w", input, err)
+	}
+	defer func() { _ = f.Close() }()
+
+	compressed, err := zlib.Compress(f)
+	if err != nil {
+		return fmt.Errorf("compress %q: %w", input, err)
+	}
+
+	if err := os.WriteFile(output, compressed, 0o644); err != nil {
+		return fmt.Errorf("write output file %q: %w", output, err)
+	}
+
+	_, _ = fmt.Fprintln(cmd.OutOrStdout(), styleSuccess.Render(fmt.Sprintf("✓ wrote %s", output)))
+	return nil
+}
+
+func runDecompress(cmd *cobra.Command, args []string) error {
+	input, output := args[0], args[1]
+
+	f, err := os.Open(input)
+	if err != nil {
+		return fmt.Errorf("open input file %q: %w", input, err)
+	}
+	defer func() { _ = f.Close() }()
+
+	decompressed, err := zlib.Decompress(f)
+	if err != nil {
+		return fmt.Errorf("decompress %q: %w", input, err)
+	}
+
+	if err := os.WriteFile(output, decompressed, 0o644); err != nil {
+		return fmt.Errorf("write output file %q: %w", output, err)
+	}
+
+	_, _ = fmt.Fprintln(cmd.OutOrStdout(), styleSuccess.Render(fmt.Sprintf("✓ wrote %s", output)))
 	return nil
 }
 
