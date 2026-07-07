@@ -88,8 +88,8 @@ func TestBandArrSort(t *testing.T) {
 
 func TestEntryTypeMethods(t *testing.T) {
 	tests := []struct {
-		et     EntryType
-		valid  bool
+		et       EntryType
+		valid    bool
 		downlink bool
 	}{
 		{EntryTypeDownlinkNoMIMO, true, true},
