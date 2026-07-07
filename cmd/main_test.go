@@ -103,6 +103,14 @@ func TestRootCommand(t *testing.T) {
 				assert.FileExists(t, filepath.Join(outDir, "created-mode-137"))
 			},
 		},
+		{
+			name: "--mode flag 333",
+			args: []string{"--mode", "333", "create", "../test/resources/2019-10-17/bands.txt", filepath.Join(outDir, "created-mode-333")},
+			assert: func(t *testing.T, out string) {
+				assert.Contains(t, out, "wrote")
+				assert.FileExists(t, filepath.Join(outDir, "created-mode-333"))
+			},
+		},
 	}
 
 	for _, tt := range tests {
