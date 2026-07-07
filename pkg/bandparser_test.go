@@ -1,27 +1,28 @@
 package pkg
 
 import (
-	"bufio"
+	"testing"
+
 	"github.com/denysvitali/ca-combos-editor/pkg/types"
 	"github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
-	"log"
-	"testing"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseCombo(t *testing.T) {
 	comboString := "3A2-1A4A"
-	entries := parseComboText(comboString)
-
-	for _, e := range entries {
-		log.Printf("Entry: %v", e)
-	}
+	entries, err := parseComboText(comboString)
+	require.NoError(t, err)
+	require.Len(t, entries, 2)
+	assert.Equal(t, "DL", entries[0].Name())
+	assert.Equal(t, "UL", entries[1].Name())
 }
 
 func TestParseComboMIMO(t *testing.T) {
 	comboString := "1A4A-1A4"
 	logrus.SetLevel(logrus.DebugLevel)
-	entries := parseComboText(comboString)
+	entries, err := parseComboText(comboString)
+	require.NoError(t, err)
 
 	b1 := types.Band{
 		Band:  1,
@@ -42,7 +43,8 @@ func TestParseComboMIMO(t *testing.T) {
 
 func TestParseComplexCombo(t *testing.T) {
 	Log.Level = logrus.DebugLevel
-	entries := parseComboText("41A4A-28A2-3A2")
+	entries, err := parseComboText("41A4A-28A2-3A2")
+	require.NoError(t, err)
 
 	b1 := types.Band{
 		Band:  41,
@@ -68,26 +70,24 @@ func TestParseComplexCombo(t *testing.T) {
 		Mimo:  2,
 	}
 
-	assert.Equal(t, entries[0].Bands(), []types.Band{b1, b2, b3}) // DL
-	assert.Equal(t, entries[1].Bands(), []types.Band{b1_2})       // UL
-
-	log.Printf("Entries: %v", entries)
+	assert.Equal(t, []types.Band{b1, b2, b3}, entries[0].Bands()) // DL
+	assert.Equal(t, []types.Band{b1_2}, entries[1].Bands())       // UL
 }
 
 func TestParseCombo2(t *testing.T) {
 	Log.Level = logrus.DebugLevel
-	entries := parseComboText("3C44A-0")
+	entries, err := parseComboText("3C44A-0")
+	require.NoError(t, err)
 
 	// DL: 3C 3C
 	// UL: 3A
-
 	assert.Equal(t, 2, len(entries))
 
 	dlEntry, ok := entries[0].(*types.DownlinkEntry)
-	assert.True(t, ok)
+	require.True(t, ok)
 
 	bands := dlEntry.Bands()
-	assert.Equal(t, 2, len(bands))
+	require.Len(t, bands, 2)
 
 	firstBand := bands[0]
 	assert.Equal(t, 3, firstBand.Band)
@@ -98,36 +98,18 @@ func TestParseCombo2(t *testing.T) {
 	assert.Equal(t, 3, secondBand.Class) // C
 
 	ulEntry, ok := entries[1].(*types.UplinkEntry)
-	assert.True(t, ok)
+	require.True(t, ok)
 
 	thirdBand := ulEntry.Bands()[0]
 	assert.Equal(t, 3, thirdBand.Band)
 	assert.Equal(t, 1, thirdBand.Class)
-
-}
-
-func Readln(r *bufio.Reader) (string, error) {
-	var (
-		isPrefix bool  = true
-		err      error = nil
-		line, ln []byte
-	)
-	for isPrefix && err == nil {
-		line, isPrefix, err = r.ReadLine()
-		ln = append(ln, line...)
-	}
-	return string(ln), err
-}
-
-func TestParseFile(t *testing.T) {
-	Log.Level = logrus.DebugLevel
-	ParseBandFile("../test/resources/2019-10-17/bands.txt")
 }
 
 func TestParseBand1(t *testing.T) {
 	comboString := "2A2A-46E2-48C2"
 	Log.Level = logrus.DebugLevel
-	entries := parseComboText(comboString)
+	entries, err := parseComboText(comboString)
+	require.NoError(t, err)
 
 	assert.NotNil(t, entries)
 	assert.Equal(t, &types.DownlinkEntry{
@@ -142,4 +124,22 @@ func TestParseBand1(t *testing.T) {
 			{Band: 2, Class: 1, Mimo: 1},
 		},
 	}, entries[1])
+}
+
+func TestParseFile(t *testing.T) {
+	Log.Level = logrus.DebugLevel
+	entries, err := ParseBandFile("../test/resources/2019-10-17/bands.txt")
+	require.NoError(t, err)
+	assert.NotEmpty(t, entries)
+}
+
+func TestParseSingleBand(t *testing.T) {
+	band, err := parseSingleBand("41A4")
+	require.NoError(t, err)
+	assert.Equal(t, types.Band{Band: 41, Class: 1, Mimo: 0}, band)
+}
+
+func TestParseSingleBandInvalid(t *testing.T) {
+	_, err := parseSingleBand("not-a-band")
+	require.Error(t, err)
 }

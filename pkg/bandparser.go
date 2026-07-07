@@ -2,15 +2,19 @@ package pkg
 
 import (
 	"bufio"
-	"github.com/denysvitali/ca-combos-editor/pkg/readers"
-	"github.com/denysvitali/ca-combos-editor/pkg/types"
+	"fmt"
 	"os"
 	"sort"
 	"strconv"
 	"strings"
+
+	"github.com/denysvitali/ca-combos-editor/pkg/readers"
+	"github.com/denysvitali/ca-combos-editor/pkg/types"
 )
 
-func parseComboText(comboString string) []types.Entry {
+// parseComboText parses a single human-readable combo line into a downlink and
+// an optional uplink entry.
+func parseComboText(comboString string) ([]types.Entry, error) {
 	Log.Debugf("comboString: %s", comboString)
 	r := readers.NewComboReader(comboString)
 
@@ -39,7 +43,7 @@ func parseComboText(comboString string) []types.Entry {
 		if err != nil || countMimo == 0 {
 			dl.SetBands(append(dl.Bands(), b))
 		} else {
-			for i := 0; i < countMimo; i++ {
+			for range countMimo {
 				b.Mimo = mimo
 				dl.SetBands(append(dl.Bands(), b))
 			}
@@ -49,7 +53,7 @@ func parseComboText(comboString string) []types.Entry {
 		if ulClass > 0 {
 			mimo, err := r.ReadNumber()
 			if err != nil {
-				// No MIMO specified (e.g: 41A4A), setting it to 1
+				// No MIMO specified (e.g: 41A4A), default to 1.
 				mimo = 1
 			}
 			ulBand := types.Band{
@@ -67,25 +71,26 @@ func parseComboText(comboString string) []types.Entry {
 	entries = append(entries, &ul)
 
 	if len(ul.Bands()) > 1 {
-		Log.Warnf("UL => %v", ul)
-		return nil
+		return nil, nil
 	}
 
-	Log.Debugf("=> %v", entries)
-	return entries
+	Log.Debugf("= %v", entries)
+	return entries, nil
 }
 
-func ParseBandDLULFile(downlink string, uplink string) []types.Entry {
+// ParseBandDLULFile creates combo entries from separate downlink and uplink
+// description files.
+func ParseBandDLULFile(downlink string, uplink string) ([]types.Entry, error) {
 	dlFile, err := os.Open(downlink)
 	if err != nil {
-		Log.Fatal(err)
+		return nil, fmt.Errorf("open downlink file: %w", err)
 	}
+	defer dlFile.Close()
+
 	ulFile, err := os.Open(uplink)
 	if err != nil {
-		Log.Fatal(err)
+		return nil, fmt.Errorf("open uplink file: %w", err)
 	}
-
-	defer dlFile.Close()
 	defer ulFile.Close()
 
 	var finalEntries []types.Entry
@@ -93,8 +98,12 @@ func ParseBandDLULFile(downlink string, uplink string) []types.Entry {
 	dlScanner := bufio.NewScanner(dlFile)
 	ulScanner := bufio.NewScanner(ulFile)
 
+	lineNo := 0
 	for dlScanner.Scan() {
-		ulScanner.Scan()
+		lineNo++
+		if !ulScanner.Scan() {
+			return nil, fmt.Errorf("downlink file has more lines than uplink file at line %d", lineNo)
+		}
 		dlText := dlScanner.Text()
 		ulText := ulScanner.Text()
 
@@ -102,16 +111,28 @@ func ParseBandDLULFile(downlink string, uplink string) []types.Entry {
 			continue
 		}
 
-		entry := parseComboText(dlText)[0]
+		entries, err := parseComboText(dlText)
+		if err != nil {
+			return nil, fmt.Errorf("line %d: %w", lineNo, err)
+		}
+		if len(entries) == 0 {
+			continue
+		}
+
+		entry := entries[0]
 		ulBands := strings.Split(ulText, ", ")
 		var ulEntries []types.Entry
 
-		sort.Sort(sort.StringSlice(ulBands))
+		sort.Strings(ulBands)
 
-		if len(ulBands) > 0 && ulText != "" {
+		if len(ulBands) > 0 && ulBands[0] != "" {
 			for _, bText := range ulBands {
+				band, err := parseSingleBand(bText)
+				if err != nil {
+					return nil, fmt.Errorf("line %d uplink %q: %w", lineNo, bText, err)
+				}
 				ulEntry := types.UplinkEntry{}
-				ulEntry.SetBands([]types.Band{parseSingleBand(bText)})
+				ulEntry.SetBands([]types.Band{band})
 				ulEntries = append(ulEntries, &ulEntry)
 			}
 		}
@@ -120,44 +141,58 @@ func ParseBandDLULFile(downlink string, uplink string) []types.Entry {
 		finalEntries = append(finalEntries, ulEntries...)
 	}
 
-	return finalEntries
+	if err := dlScanner.Err(); err != nil {
+		return nil, fmt.Errorf("read downlink file: %w", err)
+	}
+	if err := ulScanner.Err(); err != nil {
+		return nil, fmt.Errorf("read uplink file: %w", err)
+	}
+
+	return finalEntries, nil
 }
 
-func parseSingleBand(text string) types.Band {
+func parseSingleBand(text string) (types.Band, error) {
 	r := readers.NewComboReader(text)
 
 	bandNumber, err := r.ReadNumber()
 	if err != nil {
-		Log.Fatal(err)
+		return types.Band{}, fmt.Errorf("read band number in %q: %w", text, err)
 	}
 
 	bandClass := r.ReadClass()
 	if bandClass == -1 {
-		Log.Fatal("invalid band class")
+		return types.Band{}, fmt.Errorf("invalid band class in %q", text)
 	}
 
-	return types.Band{Band: bandNumber, Class: bandClass}
+	return types.Band{Band: bandNumber, Class: bandClass}, nil
 }
 
-func ParseBandFile(path string) []types.Entry {
+// ParseBandFile parses a bands.txt-style file into a sorted list of entries.
+func ParseBandFile(path string) ([]types.Entry, error) {
 	comboFile, err := os.Open(path)
 	if err != nil {
-		Log.Fatal(err)
+		return nil, fmt.Errorf("open band file: %w", err)
 	}
 	defer comboFile.Close()
 
 	var finalEntries []types.Entry
-	var finalEntriesHM = make(map[string][]types.Entry)
+	finalEntriesHM := make(map[string][]types.Entry)
 
 	scanner := bufio.NewScanner(comboFile)
+	lineNo := 0
 	for scanner.Scan() {
+		lineNo++
 		text := scanner.Text()
 
 		if text == "" {
 			continue
 		}
-		entries := parseComboText(text)
-		var dl = ""
+		entries, err := parseComboText(text)
+		if err != nil {
+			return nil, fmt.Errorf("line %d: %w", lineNo, err)
+		}
+
+		dl := ""
 		for _, e := range entries {
 			if dl == "" {
 				if e.Name() == "DL" {
@@ -175,6 +210,7 @@ func ParseBandFile(path string) []types.Entry {
 			for _, v := range finalEntriesHM[dl] {
 				if v.String() == e.String() {
 					found = true
+					break
 				}
 			}
 
@@ -184,6 +220,10 @@ func ParseBandFile(path string) []types.Entry {
 
 			finalEntriesHM[dl] = append(finalEntriesHM[dl], e)
 		}
+	}
+
+	if err := scanner.Err(); err != nil {
+		return nil, fmt.Errorf("read band file: %w", err)
 	}
 
 	for _, v := range finalEntriesHM {
@@ -213,9 +253,5 @@ func ParseBandFile(path string) []types.Entry {
 		}
 	}
 
-	if err := scanner.Err(); err != nil {
-		Log.Fatal(err)
-	}
-
-	return finalEntries
+	return finalEntries, nil
 }

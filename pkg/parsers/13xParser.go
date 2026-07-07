@@ -2,37 +2,64 @@ package parsers
 
 import (
 	"encoding/binary"
+	"fmt"
+
 	"github.com/denysvitali/ca-combos-editor/pkg/readers"
 	"github.com/denysvitali/ca-combos-editor/pkg/types"
 )
 
-func Parse13xBands(r *readers.BinaryReader) []types.Band {
+// bandSlotReader parses one band slot and returns the populated Band.
+type bandSlotReader func() (types.Band, error)
+
+// readBandSlots reads exactly MaxBandsPerEntry band slots using slot for the
+// per-slot layout. Slots with an invalid band or class are treated as empty and
+// skipped.
+func readBandSlots(slot bandSlotReader) ([]types.Band, error) {
 	var combos []types.Band
-
-	for i := 0; i < 6; i++ {
-		bwc := types.Band{}
-		band := binary.LittleEndian.Uint16([]byte{r.Rb(), r.Rb()})
-		class := int(r.Rb())
-		bwc.Band = int(band)
-		bwc.Class = class
-
-		if bwc.Band < 1 || bwc.Band > 255 || bwc.Class < 0 || bwc.Class > 9 {
-			// Null, skip
-			continue
+	for i := range types.MaxBandsPerEntry {
+		b, err := slot()
+		if err != nil {
+			return nil, fmt.Errorf("band slot %d: %w", i, err)
 		}
-		combos = append(combos, bwc)
+		if b.Band >= 1 && b.Band <= 255 && b.Class >= 1 && b.Class <= 9 {
+			combos = append(combos, b)
+		}
 	}
-	return combos
+	return combos, nil
 }
 
-func Parse137(r *readers.BinaryReader) types.Entry {
-	entry := &types.DownlinkEntry{}
-	entry.SetBands(Parse13xBands(r))
-	return entry
+// Parse13xBands reads six 3-byte band records (uint16 LE band + uint8 class).
+func Parse13xBands(r *readers.BinaryReader) ([]types.Band, error) {
+	return readBandSlots(func() (types.Band, error) {
+		b := types.Band{}
+		bandBytes, err := r.ReadBytes(2)
+		if err != nil {
+			return b, err
+		}
+		b.Band = int(binary.LittleEndian.Uint16(bandBytes))
+		classByte, err := r.Rb()
+		if err != nil {
+			return b, err
+		}
+		b.Class = int(classByte)
+		return b, nil
+	})
 }
 
-func Parse138(r *readers.BinaryReader) types.Entry {
-	entry := &types.UplinkEntry{}
-	entry.SetBands(Parse13xBands(r))
-	return entry
+// Parse137 parses a downlink entry without MIMO information.
+func Parse137(r *readers.BinaryReader) (types.Entry, error) {
+	bands, err := Parse13xBands(r)
+	if err != nil {
+		return nil, err
+	}
+	return &types.DownlinkEntry{BandArr: bands}, nil
+}
+
+// Parse138 parses an uplink entry without MIMO information.
+func Parse138(r *readers.BinaryReader) (types.Entry, error) {
+	bands, err := Parse13xBands(r)
+	if err != nil {
+		return nil, err
+	}
+	return &types.UplinkEntry{BandArr: bands}, nil
 }

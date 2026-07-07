@@ -2,9 +2,12 @@ package readers
 
 import (
 	"bytes"
-	"github.com/sirupsen/logrus"
+	"fmt"
+	"io"
 )
 
+// BinaryReader wraps a bytes.Reader and provides helpers for reading the
+// little-endian Qualcomm NV item format.
 type BinaryReader struct {
 	reader *bytes.Reader
 }
@@ -13,27 +16,37 @@ func NewMyReader(reader *bytes.Reader) BinaryReader {
 	return BinaryReader{reader: reader}
 }
 
-func (m *BinaryReader) Rb() byte {
-	b, e := m.reader.ReadByte()
-	if e != nil {
-		logrus.Fatal(e)
+// Rb reads the next byte or returns an error on EOF.
+func (m *BinaryReader) Rb() (byte, error) {
+	b, err := m.reader.ReadByte()
+	if err != nil {
+		return 0, fmt.Errorf("read byte: %w", err)
 	}
-	return b
+	return b, nil
 }
 
-func (m *BinaryReader) ReadBytes(num int) []byte {
-	var bArr []byte
-	for i := 0; i < num; i++ {
-		bArr = append(bArr, m.Rb())
+// ReadBytes reads exactly num bytes.
+func (m *BinaryReader) ReadBytes(num int) ([]byte, error) {
+	bArr := make([]byte, num)
+	if _, err := io.ReadFull(m.reader, bArr); err != nil {
+		return nil, fmt.Errorf("read %d bytes: %w", num, err)
 	}
-	return bArr
+	return bArr, nil
 }
 
-func (m *BinaryReader) Expect(b byte) {
-	found := m.Rb()
+// Expect reads a byte and verifies it matches the expected value.
+func (m *BinaryReader) Expect(b byte) error {
+	found, err := m.Rb()
+	if err != nil {
+		return err
+	}
 	if found != b {
-		logrus.Fatalf("Unexpected byte %02X found, %02X expected",
-			found&0xFF,
-			b&0xFF)
+		return fmt.Errorf("unexpected byte 0x%02X, expected 0x%02X", found, b)
 	}
+	return nil
+}
+
+// Len returns the number of bytes remaining in the reader.
+func (m *BinaryReader) Len() int {
+	return m.reader.Len()
 }
