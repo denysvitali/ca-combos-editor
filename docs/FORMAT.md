@@ -134,7 +134,7 @@ Inside a downlink entry, bands are sorted **before serialization** by the writer
 - The band number is in descending order (highest band first).
 - If two bands share the same number, the class is in descending order (largest class first).
 
-For example, the human-readable text `3A2-1A4` becomes `3A2-1A4` when serialized, because 3 > 1. The band `48C2-46E2-2A2` is reordered to `48C2-46E2-2A2` (48, 46, 2).
+For example, the human-readable text `1A4-3A2` becomes `3A2-1A4` when serialized, because 3 > 1. The band `2A2-46E2-48C2` is reordered to `48C2-46E2-2A2` (48, 46, 2).
 
 The text rendering also sorts using the same descending rule, so the output order matches the binary order.
 
@@ -195,11 +195,11 @@ The optional uplink class is the second class letter after the MIMO count. If th
 
 This file is read by the modem at boot. An invalid 00028874 can cause the modem to reject the NV item, fail to register, or bootloop. Always keep a backup of the original file and monitor `dmesg` for modem failures when testing a modified file.
 
-### 11. Planned CLI `compress` / `decompress` Commands
+### 11. Native `compress` / `decompress` Commands
 
-The Go package `pkg/zlib` already provides `Compress` and `Decompress` helpers that use zlib level 6. The shell scripts `compress.sh` and `uncompress.sh` wrap `zlib-flate` for the same operations. A native CLI interface is planned so the tool can manage the zlib wrapper directly:
+The tool can manage the zlib wrapper directly, so the `zlib-flate` workflow is optional:
 
 - `ca-combos-editor decompress <00028874> <extracted.bin>` — read a raw zlib stream and write the uncompressed payload.
 - `ca-combos-editor compress <extracted.bin> <00028874>` — compress an uncompressed payload with zlib level 6 and write the raw 00028874 file.
 
-Both commands will be exact replacements for the current `zlib-flate` workflow and will use the same level-6 settings observed in original device files.
+Both commands use the same level-6 settings observed in original device files and are exact replacements for the `compress.sh` / `uncompress.sh` scripts.

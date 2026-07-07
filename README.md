@@ -54,7 +54,12 @@ A configuration file named `ca-combos-editor.yaml` (or one in `$HOME/.config/ca-
 
 #### `parse` - Parse an uncompressed 00028874 payload
 
-1. Extract the NV item (or use the planned `ca-combos-editor decompress 00028874 extracted.bin`):
+1. Extract the NV item:
+```
+ca-combos-editor decompress 00028874 extracted.bin
+```
+
+Or with `zlib-flate`:
 ```
 zlib-flate --uncompress < 00028874 > extracted.bin
 ```
@@ -77,8 +82,14 @@ ca-combos-editor --log-level debug parse extracted.bin
 ca-combos-editor create bands.txt 00028874_uncompressed
 ```
 3. Compress it:
-   - With the planned native command: `ca-combos-editor compress 00028874_uncompressed 00028874`
-   - Or with the helper script: `./compress.sh 00028874_uncompressed`
+```
+ca-combos-editor compress 00028874_uncompressed 00028874
+```
+
+Or with the helper script:
+```
+./compress.sh 00028874_uncompressed
+```
 4. Write the new `00028874` file to your modem
 
 Use writer mode 201 or 333 if needed:
@@ -129,13 +140,12 @@ Generate the payload with:
 ca-combos-editor create-dlul downlink.txt uplink.txt output
 ```
 
-A new file `output` will be generated. Compress it with the planned native command
-`ca-combos-editor compress output 00028874` or with `./compress.sh output` to get
-the final `00028874` file.
+A new file `output` will be generated. Compress it with `ca-combos-editor compress output 00028874`
+or with `./compress.sh output` to get the final `00028874` file.
 
-#### `decompress` / `compress` - Manage the zlib wrapper directly (planned)
+#### `decompress` / `compress` - Manage the zlib wrapper directly
 
-These commands will wrap/unwrap the raw zlib layer without needing `zlib-flate`:
+These commands wrap/unwrap the raw zlib layer without needing `zlib-flate`:
 
 ```
 # Extract the payload from a raw 00028874 file
@@ -144,9 +154,6 @@ ca-combos-editor decompress 00028874 extracted.bin
 # Create a raw 00028874 file from an extracted payload
 ca-combos-editor compress extracted.bin 00028874
 ```
-
-Until the native commands land, use the equivalent `compress.sh` / `uncompress.sh`
-helpers or `zlib-flate` directly.
 
 ## FAQ
 
