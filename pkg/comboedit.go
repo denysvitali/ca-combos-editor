@@ -206,7 +206,7 @@ func (w *ComboWriter) uplinkType() types.EntryType {
 }
 
 func (w *ComboWriter) writeBands(bands []types.Band) {
-	for i := 0; i < types.MaxBandsPerEntry; i++ {
+	for i := range types.MaxBandsPerEntry {
 		if i < len(bands) {
 			w.FileBody = append(w.FileBody, byte(bands[i].Band), 0x00, byte(bands[i].Class))
 			if w.Mode == COMBOWRITER_201_202 {
