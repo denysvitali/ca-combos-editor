@@ -29,8 +29,13 @@ jobs:
           go-version: ${{ matrix.go }}
           cache: true
 
-      - name: Download modules
-        run: go mod download
+      - name: Download and verify modules
+        run: |
+          go mod download
+          go mod verify
+
+      - name: Build
+        run: go build ./...
 
       - name: Run go vet
         run: go vet ./...
@@ -74,6 +79,41 @@ jobs:
           cache: true
 
       - name: Run golangci-lint
-        uses: golangci/golangci-lint-action@v9
+        uses: golangci/golangci-lint-action@v9.3.0
         with:
-          version: latest
+          version: v2.12.2
+          args: --timeout=5m
+
+  vuln:
+    name: vuln
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - name: Run govulncheck
+        uses: golang/govulncheck-action@v1
+        with:
+          go-version-input: "1.26"
+
+  race:
+    name: race
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.26"
+          cache: true
+
+      - name: Run tests with race detector
+        run: go test -race ./...

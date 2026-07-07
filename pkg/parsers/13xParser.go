@@ -28,21 +28,27 @@ func readBandSlots(slot bandSlotReader) ([]types.Band, error) {
 	return combos, nil
 }
 
+// readBandAndClass reads the common band slot prefix: a little-endian uint16
+// band followed by a uint8 bandwidth class.
+func readBandAndClass(r *readers.BinaryReader) (types.Band, error) {
+	b := types.Band{}
+	bandBytes, err := r.ReadBytes(2)
+	if err != nil {
+		return b, err
+	}
+	b.Band = int(binary.LittleEndian.Uint16(bandBytes))
+	classByte, err := r.Rb()
+	if err != nil {
+		return b, err
+	}
+	b.Class = int(classByte)
+	return b, nil
+}
+
 // Parse13xBands reads six 3-byte band records (uint16 LE band + uint8 class).
 func Parse13xBands(r *readers.BinaryReader) ([]types.Band, error) {
 	return readBandSlots(func() (types.Band, error) {
-		b := types.Band{}
-		bandBytes, err := r.ReadBytes(2)
-		if err != nil {
-			return b, err
-		}
-		b.Band = int(binary.LittleEndian.Uint16(bandBytes))
-		classByte, err := r.Rb()
-		if err != nil {
-			return b, err
-		}
-		b.Class = int(classByte)
-		return b, nil
+		return readBandAndClass(r)
 	})
 }
 

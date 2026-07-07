@@ -1,8 +1,6 @@
 package parsers
 
 import (
-	"encoding/binary"
-
 	"github.com/denysvitali/ca-combos-editor/pkg/readers"
 	"github.com/denysvitali/ca-combos-editor/pkg/types"
 )
@@ -11,17 +9,10 @@ import (
 // eight antenna bytes).
 func Parse33xBands(r *readers.BinaryReader) ([]types.Band, error) {
 	return readBandSlots(func() (types.Band, error) {
-		b := types.Band{}
-		bandBytes, err := r.ReadBytes(2)
+		b, err := readBandAndClass(r)
 		if err != nil {
 			return b, err
 		}
-		b.Band = int(binary.LittleEndian.Uint16(bandBytes))
-		classByte, err := r.Rb()
-		if err != nil {
-			return b, err
-		}
-		b.Class = int(classByte)
 		b.Antennas = ParseAntennas(r)
 		return b, nil
 	})

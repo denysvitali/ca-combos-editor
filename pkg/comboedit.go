@@ -31,6 +31,8 @@ const (
 	COMBOWRITER_137_138 ComboWriterMode = 137
 	// COMBOWRITER_201_202 emits 201/202 entries with MIMO bytes.
 	COMBOWRITER_201_202 ComboWriterMode = 201
+	// COMBOWRITER_333_334 emits 333/334 entries with antenna bytes.
+	COMBOWRITER_333_334 ComboWriterMode = 333
 )
 
 // ComboWriter serializes a slice of entries to the uncompressed payload format.
@@ -191,6 +193,8 @@ func (w *ComboWriter) downlinkType() types.EntryType {
 		return types.EntryTypeDownlinkNoMIMO
 	case COMBOWRITER_201_202:
 		return types.EntryTypeDownlinkMIMO
+	case COMBOWRITER_333_334:
+		return types.EntryTypeDownlinkAntennas
 	}
 	return types.EntryTypeDownlinkNoMIMO
 }
@@ -201,6 +205,8 @@ func (w *ComboWriter) uplinkType() types.EntryType {
 		return types.EntryTypeUplinkNoMIMO
 	case COMBOWRITER_201_202:
 		return types.EntryTypeUplinkMIMO
+	case COMBOWRITER_333_334:
+		return types.EntryTypeUplinkAntennas
 	}
 	return types.EntryTypeUplinkNoMIMO
 }
@@ -208,22 +214,45 @@ func (w *ComboWriter) uplinkType() types.EntryType {
 func (w *ComboWriter) writeBands(bands []types.Band) {
 	for i := range types.MaxBandsPerEntry {
 		if i < len(bands) {
-			w.FileBody = append(w.FileBody, byte(bands[i].Band), 0x00, byte(bands[i].Class))
-			if w.Mode == COMBOWRITER_201_202 {
-				w.FileBody = append(w.FileBody, byte(bands[i].Mimo))
-			}
+			w.writeBand(bands[i])
 		} else {
-			w.FileBody = append(w.FileBody, 0x00, 0x00, 0x00)
-			if w.Mode == COMBOWRITER_201_202 {
-				w.FileBody = append(w.FileBody, 0x00)
-			}
+			w.writeEmptyBand()
 		}
 	}
 }
 
+func (w *ComboWriter) writeBand(b types.Band) {
+	bandBytes := make([]byte, 2)
+	binary.LittleEndian.PutUint16(bandBytes, uint16(b.Band))
+	w.FileBody = append(w.FileBody, bandBytes...)
+	w.FileBody = append(w.FileBody, byte(b.Class))
+
+	switch w.Mode {
+	case COMBOWRITER_201_202:
+		w.FileBody = append(w.FileBody, byte(b.Mimo))
+	case COMBOWRITER_333_334:
+		antennaBytes := make([]byte, types.AntennaCount)
+		for i, a := range b.Antennas {
+			if i >= types.AntennaCount {
+				break
+			}
+			antennaBytes[i] = byte(a)
+		}
+		w.FileBody = append(w.FileBody, antennaBytes...)
+	}
+}
+
+func (w *ComboWriter) writeEmptyBand() {
+	empty := make([]byte, w.bandRecordSize())
+	w.FileBody = append(w.FileBody, empty...)
+}
+
 func (w *ComboWriter) bandRecordSize() int {
-	if w.Mode == COMBOWRITER_201_202 {
+	switch w.Mode {
+	case COMBOWRITER_201_202:
 		return types.BandRecordSize20x
+	case COMBOWRITER_333_334:
+		return types.BandRecordSize33x
 	}
 	return types.BandRecordSize13x
 }

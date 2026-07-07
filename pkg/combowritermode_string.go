@@ -10,11 +10,13 @@ func _() {
 	var x [1]struct{}
 	_ = x[COMBOWRITER_137_138-137]
 	_ = x[COMBOWRITER_201_202-201]
+	_ = x[COMBOWRITER_333_334-333]
 }
 
 const (
 	_ComboWriterMode_name_0 = "COMBOWRITER_137_138"
 	_ComboWriterMode_name_1 = "COMBOWRITER_201_202"
+	_ComboWriterMode_name_2 = "COMBOWRITER_333_334"
 )
 
 func (i ComboWriterMode) String() string {
@@ -23,6 +25,8 @@ func (i ComboWriterMode) String() string {
 		return _ComboWriterMode_name_0
 	case i == 201:
 		return _ComboWriterMode_name_1
+	case i == 333:
+		return _ComboWriterMode_name_2
 	default:
 		return "ComboWriterMode(" + strconv.FormatInt(int64(i), 10) + ")"
 	}
