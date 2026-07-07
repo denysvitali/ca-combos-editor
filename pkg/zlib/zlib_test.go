@@ -39,7 +39,7 @@ func TestDecompressOriginal(t *testing.T) {
 	if err != nil {
 		t.Fatalf("failed to open 00028874: %v", err)
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	got, err := zlib.Decompress(f)
 	if err != nil {

@@ -101,7 +101,7 @@ func TestParse13xBands(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := readers.NewMyReader(bytes.NewReader(tt.input))
+			r := readers.NewBinaryReader(bytes.NewReader(tt.input))
 			got, err := Parse13xBands(&r)
 			if tt.wantErr {
 				require.Error(t, err)
@@ -115,7 +115,7 @@ func TestParse13xBands(t *testing.T) {
 
 func TestParse137(t *testing.T) {
 	input := build13x([]types.Band{{Band: 7, Class: 1}})
-	r := readers.NewMyReader(bytes.NewReader(input))
+	r := readers.NewBinaryReader(bytes.NewReader(input))
 	entry, err := Parse137(&r)
 	require.NoError(t, err)
 	assert.IsType(t, &types.DownlinkEntry{}, entry)
@@ -124,7 +124,7 @@ func TestParse137(t *testing.T) {
 
 func TestParse138(t *testing.T) {
 	input := build13x([]types.Band{{Band: 3, Class: 2}})
-	r := readers.NewMyReader(bytes.NewReader(input))
+	r := readers.NewBinaryReader(bytes.NewReader(input))
 	entry, err := Parse138(&r)
 	require.NoError(t, err)
 	assert.IsType(t, &types.UplinkEntry{}, entry)
@@ -180,7 +180,7 @@ func TestParse20xBands(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := readers.NewMyReader(bytes.NewReader(tt.input))
+			r := readers.NewBinaryReader(bytes.NewReader(tt.input))
 			got, err := Parse20xBands(&r)
 			if tt.wantErr {
 				require.Error(t, err)
@@ -194,7 +194,7 @@ func TestParse20xBands(t *testing.T) {
 
 func TestParse201(t *testing.T) {
 	input := build20x([]types.Band{{Band: 7, Class: 1, Mimo: 2}})
-	r := readers.NewMyReader(bytes.NewReader(input))
+	r := readers.NewBinaryReader(bytes.NewReader(input))
 	entry, err := Parse201(&r)
 	require.NoError(t, err)
 	assert.IsType(t, &types.DownlinkEntry{}, entry)
@@ -203,7 +203,7 @@ func TestParse201(t *testing.T) {
 
 func TestParse202(t *testing.T) {
 	input := build20x([]types.Band{{Band: 3, Class: 2, Mimo: 4}})
-	r := readers.NewMyReader(bytes.NewReader(input))
+	r := readers.NewBinaryReader(bytes.NewReader(input))
 	entry, err := Parse202(&r)
 	require.NoError(t, err)
 	assert.IsType(t, &types.UplinkEntry{}, entry)
@@ -261,7 +261,7 @@ func TestParse33xBands(t *testing.T) {
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			r := readers.NewMyReader(bytes.NewReader(tt.input))
+			r := readers.NewBinaryReader(bytes.NewReader(tt.input))
 			got, err := Parse33xBands(&r)
 			if tt.wantErr {
 				require.Error(t, err)
@@ -275,7 +275,7 @@ func TestParse33xBands(t *testing.T) {
 
 func TestParse333(t *testing.T) {
 	input := build33x([]types.Band{{Band: 7, Class: 1, Antennas: []types.Antenna{1, 2, 3}}})
-	r := readers.NewMyReader(bytes.NewReader(input))
+	r := readers.NewBinaryReader(bytes.NewReader(input))
 	entry, err := Parse333(&r)
 	require.NoError(t, err)
 	assert.IsType(t, &types.DownlinkEntry{}, entry)
@@ -284,7 +284,7 @@ func TestParse333(t *testing.T) {
 
 func TestParse334(t *testing.T) {
 	input := build33x([]types.Band{{Band: 3, Class: 2, Antennas: []types.Antenna{4, 5}}})
-	r := readers.NewMyReader(bytes.NewReader(input))
+	r := readers.NewBinaryReader(bytes.NewReader(input))
 	entry, err := Parse334(&r)
 	require.NoError(t, err)
 	assert.IsType(t, &types.UplinkEntry{}, entry)
@@ -293,14 +293,14 @@ func TestParse334(t *testing.T) {
 
 func TestParseAntennas(t *testing.T) {
 	input := []byte{0x01, 0x02, 0x03, 0x00, 0x00, 0x00, 0x00, 0x00}
-	r := readers.NewMyReader(bytes.NewReader(input))
+	r := readers.NewBinaryReader(bytes.NewReader(input))
 	got := ParseAntennas(&r)
 	assert.Equal(t, []types.Antenna{1, 2, 3}, got)
 }
 
 func TestParseAntennasIgnoresTrailingZeros(t *testing.T) {
 	input := []byte{0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00}
-	r := readers.NewMyReader(bytes.NewReader(input))
+	r := readers.NewBinaryReader(bytes.NewReader(input))
 	got := ParseAntennas(&r)
 	assert.Empty(t, got)
 }

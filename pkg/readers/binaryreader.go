@@ -24,13 +24,20 @@ func NewMyReader(reader *bytes.Reader) BinaryReader {
 	return NewBinaryReader(reader)
 }
 
-// Rb reads the next byte or returns an error on EOF.
-func (m *BinaryReader) Rb() (byte, error) {
+// ReadByte reads the next byte or returns an error on EOF.
+func (m *BinaryReader) ReadByte() (byte, error) {
 	b, err := m.reader.ReadByte()
 	if err != nil {
 		return 0, fmt.Errorf("read byte: %w", err)
 	}
 	return b, nil
+}
+
+// Rb reads the next byte or returns an error on EOF.
+//
+// Deprecated: use ReadByte instead.
+func (m *BinaryReader) Rb() (byte, error) {
+	return m.ReadByte()
 }
 
 // ReadBytes reads exactly num bytes.
@@ -44,7 +51,7 @@ func (m *BinaryReader) ReadBytes(num int) ([]byte, error) {
 
 // Expect reads a byte and verifies it matches the expected value.
 func (m *BinaryReader) Expect(b byte) error {
-	found, err := m.Rb()
+	found, err := m.ReadByte()
 	if err != nil {
 		return err
 	}

@@ -15,7 +15,7 @@ func Compress(r io.Reader) ([]byte, error) {
 	}
 
 	if _, err := io.Copy(w, r); err != nil {
-		w.Close()
+		_ = w.Close()
 		return nil, err
 	}
 
@@ -32,7 +32,7 @@ func Decompress(r io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	defer rc.Close()
+	defer func() { _ = rc.Close() }()
 
 	return io.ReadAll(rc)
 }

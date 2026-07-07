@@ -54,7 +54,7 @@ type ComboFile struct {
 
 // Parse decodes the payload into a ComboFile.
 func (c *ComboEdit) Parse() (ComboFile, error) {
-	r := readers.NewMyReader(bytes.NewReader(c.FileContent))
+	r := readers.NewBinaryReader(bytes.NewReader(c.FileContent))
 	if err := r.Expect(0x00); err != nil {
 		return ComboFile{}, fmt.Errorf("header byte 0: %w", err)
 	}

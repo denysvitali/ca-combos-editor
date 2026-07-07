@@ -13,7 +13,7 @@ func Parse20xBands(r *readers.BinaryReader) ([]types.Band, error) {
 		if err != nil {
 			return b, err
 		}
-		mimoByte, err := r.Rb()
+		mimoByte, err := r.ReadByte()
 		if err != nil {
 			return b, err
 		}

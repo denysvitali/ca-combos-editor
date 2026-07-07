@@ -36,7 +36,7 @@ ca-combos-editor [global flags] <command> [args]
 | Flag | Short | Default | Description |
 |------|-------|---------|-------------|
 | `--log-level` | `-l` | `error` | Set the logging level: `debug`, `info`, `warn`, `error` |
-| `--mode` | `-m` | `137` | Writer mode: `137` (legacy) or `201` (alternate) |
+| `--mode` | `-m` | `137` | Writer mode: `137` (legacy), `201` (MIMO), or `333` (antenna-aware) |
 
 ### Environment Variables
 
@@ -46,6 +46,7 @@ All flags can also be set via environment variables prefixed with `CA_COMBOS_`:
 |----------|-----------------|---------|
 | `CA_COMBOS_LOG_LEVEL` | `--log-level` | `CA_COMBOS_LOG_LEVEL=debug` |
 | `CA_COMBOS_MODE` | `--mode` | `CA_COMBOS_MODE=201` |
+| `CA_COMBOS_MODE` | `--mode` | `CA_COMBOS_MODE=333` |
 
 A configuration file named `ca-combos-editor.yaml` (or one in `$HOME/.config/ca-combos-editor`) is also supported.
 
@@ -53,7 +54,7 @@ A configuration file named `ca-combos-editor.yaml` (or one in `$HOME/.config/ca-
 
 #### `parse` - Parse an uncompressed 00028874 payload
 
-1. Extract the NV item:
+1. Extract the NV item (or use the planned `ca-combos-editor decompress 00028874 extracted.bin`):
 ```
 zlib-flate --uncompress < 00028874 > extracted.bin
 ```
@@ -75,12 +76,15 @@ ca-combos-editor --log-level debug parse extracted.bin
 ```
 ca-combos-editor create bands.txt 00028874_uncompressed
 ```
-3. Compress it: `./compress.sh 00028874_uncompressed`
+3. Compress it:
+   - With the planned native command: `ca-combos-editor compress 00028874_uncompressed 00028874`
+   - Or with the helper script: `./compress.sh 00028874_uncompressed`
 4. Write the new `00028874` file to your modem
 
-Use writer mode 201 if needed:
+Use writer mode 201 or 333 if needed:
 ```
 ca-combos-editor --mode 201 create bands.txt 00028874_uncompressed
+ca-combos-editor --mode 333 create bands.txt 00028874_uncompressed
 ```
 
 #### `create-dlul` - Create a payload from separate downlink and uplink files
@@ -125,8 +129,24 @@ Generate the payload with:
 ca-combos-editor create-dlul downlink.txt uplink.txt output
 ```
 
-A new file `output` will be generated. Compress it with `./compress.sh output`
-and you'll get the 00028874 file.
+A new file `output` will be generated. Compress it with the planned native command
+`ca-combos-editor compress output 00028874` or with `./compress.sh output` to get
+the final `00028874` file.
+
+#### `decompress` / `compress` - Manage the zlib wrapper directly (planned)
+
+These commands will wrap/unwrap the raw zlib layer without needing `zlib-flate`:
+
+```
+# Extract the payload from a raw 00028874 file
+ca-combos-editor decompress 00028874 extracted.bin
+
+# Create a raw 00028874 file from an extracted payload
+ca-combos-editor compress extracted.bin 00028874
+```
+
+Until the native commands land, use the equivalent `compress.sh` / `uncompress.sh`
+helpers or `zlib-flate` directly.
 
 ## FAQ
 

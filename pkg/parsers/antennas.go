@@ -11,7 +11,7 @@ import (
 func ParseAntennas(r *readers.BinaryReader) []types.Antenna {
 	var antennas []types.Antenna
 	for range types.AntennaCount {
-		b, err := r.Rb()
+		b, err := r.ReadByte()
 		if err != nil {
 			break
 		}

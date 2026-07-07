@@ -70,7 +70,7 @@ After the header, each entry begins with a 2-byte little-endian type discriminat
 | `333` | `EntryTypeDownlinkAntennas` | Downlink | 8-byte antenna list |
 | `334` | `EntryTypeUplinkAntennas` | Uplink | 8-byte antenna list |
 
-A single 00028874 file normally uses a consistent format for every entry (e.g., 137/138 or 201/202). The 333/334 variant is not yet emitted by the editor but is parsed for inspection.
+A single 00028874 file normally uses a consistent format for every entry (e.g., 137/138, 201/202, or 333/334). The 333/334 antenna-aware variant is parsed for inspection and can be written with writer mode `333` (`COMBOWRITER_333_334`).
 
 ### 4. Band Record Layouts
 
@@ -109,7 +109,7 @@ Each slot is **11 bytes**:
 |-------|------|-------------|
 | Band | 2 bytes | Little-endian unsigned 16-bit band number |
 | Class | 1 byte | Bandwidth class (A=1, B=2, C=3, D=4, E=5, F=6, G=7, H=8, I=9) |
-| Antennas | 8 bytes | Antenna index list (see section 6) |
+| Antennas | 8 bytes | Antenna index list (see section 7) |
 
 Slot size: 11 bytes  
 Entry payload size: 2 (type) + 6 × 11 = **68 bytes**
@@ -146,13 +146,28 @@ Inside each uplink entry, bands are stored in the order they were given and are 
 
 ### 7. Antenna List Semantics
 
-The 333/334 format stores an antenna list for each band. The list is an array of 8 raw bytes. A non-zero byte means that antenna index is active. The active antenna indices are collected, in order, and exposed as an `[]Antenna` slice. A zero byte is ignored.
+The 333/334 format stores an antenna port list for each populated band. The list is serialized as **8 raw bytes** immediately after the class byte. Each byte is interpreted as follows:
+
+- A **non-zero** byte is an active antenna index. The value is treated as a **1-based antenna port number** (e.g., `0x01` = antenna 1, `0x02` = antenna 2).
+- A **zero** byte is padding and is ignored.
+- The eight bytes are read in order; the resulting `[]Antenna` slice preserves that order.
+- The writer emits up to eight antennas from `Band.Antennas`, placing them in the first bytes of the 8-byte field and zero-padding the remainder. Extra antennas beyond the eighth are dropped.
 
 Example: if the 8 antenna bytes are `01 02 03 00 00 00 00 00`, the parsed antenna list is `[1, 2, 3]`.
 
 There is no additional structure such as bitmasks or counts; each populated byte is treated as a single 1-based antenna index.
 
-### 8. Human-Readable Text Format
+### 8. Reverse-Engineering Observations from Fixtures
+
+The files under `test/resources/` show the following consistent patterns:
+
+- **Entry-type families are not mixed.** Each fixture uses exactly one pair of entry types: either 137/138, 201/202, or (in the 010 Editor template) 333/334. A real 00028874 file never interleaves families.
+- **DL-then-UL grouping.** Within a family, every downlink entry is followed immediately by one or more uplink entries. Some downlinks have a single uplink; others have several (e.g., the 2019-11-26 fixtures show `[201, 202, 202]` blocks).
+- **Zlib wrapper.** Every compressed fixture begins with the two-byte zlib header `78 9c`. This means CMF = `0x78` (deflate, 32 KiB window) and FLG = `0x9c` (FLEVEL = `10`, i.e., default compression, no preset dictionary). The FLEVEL value matches the zlib level 6 used by the compressor helper and the `compress.sh` script.
+- **Original payloads are not pre-sorted.** Some device-extracted downlink entries store bands in ascending order (e.g., `1A-5A` or `3A-7C`). The writer normalizes every downlink entry to descending band number, then descending class, before serialization.
+- **Stable header.** All decompressed payloads start with two zero bytes followed by a little-endian `uint16` entry count.
+
+### 9. Human-Readable Text Format
 
 The tool supports two input formats: a single `bands.txt` file and a split `downlink.txt`/`uplink.txt` pair.
 
@@ -179,3 +194,12 @@ The optional uplink class is the second class letter after the MIMO count. If th
 ### 9. Safety Notes
 
 This file is read by the modem at boot. An invalid 00028874 can cause the modem to reject the NV item, fail to register, or bootloop. Always keep a backup of the original file and monitor `dmesg` for modem failures when testing a modified file.
+
+### 10. Planned CLI `compress` / `decompress` Commands
+
+The Go package `pkg/zlib` already provides `Compress` and `Decompress` helpers that use zlib level 6. The shell scripts `compress.sh` and `uncompress.sh` wrap `zlib-flate` for the same operations. A native CLI interface is planned so the tool can manage the zlib wrapper directly:
+
+- `ca-combos-editor decompress <00028874> <extracted.bin>` — read a raw zlib stream and write the uncompressed payload.
+- `ca-combos-editor compress <extracted.bin> <00028874>` — compress an uncompressed payload with zlib level 6 and write the raw 00028874 file.
+
+Both commands will be exact replacements for the current `zlib-flate` workflow and will use the same level-6 settings observed in original device files.

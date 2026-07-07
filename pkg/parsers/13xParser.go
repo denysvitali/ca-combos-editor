@@ -37,7 +37,7 @@ func readBandAndClass(r *readers.BinaryReader) (types.Band, error) {
 		return b, err
 	}
 	b.Band = int(binary.LittleEndian.Uint16(bandBytes))
-	classByte, err := r.Rb()
+	classByte, err := r.ReadByte()
 	if err != nil {
 		return b, err
 	}
