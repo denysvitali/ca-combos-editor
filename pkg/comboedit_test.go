@@ -126,6 +126,45 @@ func TestComboEditRoundTripAntennaMode(t *testing.T) {
 	assert.Equal(t, normalizeEntries(cf.Entries), normalizeEntries(cf2.Entries))
 }
 
+func TestComboEditByteRoundTrip(t *testing.T) {
+	tests := []struct {
+		name    string
+		fixture string
+		mode    ComboWriterMode
+	}{
+		{
+			name:    "13x fixture byte round-trip",
+			fixture: "../test/resources/2019-10-17/extracted",
+			mode:    COMBOWRITER_137_138,
+		},
+		{
+			name:    "20x fixture 1 byte round-trip",
+			fixture: "../test/resources/2019-11-26/extracted/1",
+			mode:    COMBOWRITER_201_202,
+		},
+		{
+			name:    "20x fixture 2 byte round-trip",
+			fixture: "../test/resources/2019-11-26/extracted/2",
+			mode:    COMBOWRITER_201_202,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			data, err := os.ReadFile(tt.fixture)
+			require.NoError(t, err)
+
+			ce := NewComboEdit(data)
+			cf, err := ce.Parse()
+			require.NoError(t, err)
+
+			w := ComboWriter{Mode: tt.mode}
+			serialized := w.Write(cf.Entries)
+
+			assert.Equal(t, data, serialized)
+		})
+	}
+}
+
 func TestComboEditParseInvalidHeader(t *testing.T) {
 	ce := NewComboEdit([]byte{0x01, 0x00, 0x00, 0x00})
 	_, err := ce.Parse()
@@ -160,13 +199,18 @@ func normalizeEntries(entries []types.Entry) []types.Entry {
 	return normalized
 }
 
-func TestReadComboFile(t *testing.T) {
+func TestReadComboFileTo(t *testing.T) {
 	var buf bytes.Buffer
-	err := ReadComboFile("../test/resources/2019-10-17/extracted", &buf)
+	err := ReadComboFileTo("../test/resources/2019-10-17/extracted", &buf)
 	require.NoError(t, err)
 	out := buf.String()
 	assert.Contains(t, out, "DL")
 	assert.Contains(t, out, "UL")
+}
+
+func TestReadComboFileBackwardCompat(t *testing.T) {
+	err := ReadComboFile("../test/resources/2019-10-17/extracted")
+	require.NoError(t, err)
 }
 
 func TestWriteComboFile(t *testing.T) {

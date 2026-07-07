@@ -190,7 +190,7 @@ func runParse(cmd *cobra.Command, args []string) error {
 	_, _ = fmt.Fprintln(cmd.OutOrStdout(), styleHeader.Render("Carrier Aggregation Combos"))
 	_, _ = fmt.Fprintln(cmd.OutOrStdout())
 
-	if err := pkg.ReadComboFile(input, cmd.OutOrStdout()); err != nil {
+	if err := pkg.ReadComboFileTo(input, cmd.OutOrStdout()); err != nil {
 		return fmt.Errorf("read combo file %q: %w", input, err)
 	}
 	return nil

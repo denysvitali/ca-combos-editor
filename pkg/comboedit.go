@@ -100,8 +100,8 @@ func (w *ComboWriter) Write(entries []types.Entry) []byte {
 	return output
 }
 
-// ReadComboFile parses an uncompressed combo file and writes its entries to out.
-func ReadComboFile(path string, out io.Writer) error {
+// ReadComboFileTo parses an uncompressed combo file and writes its entries to out.
+func ReadComboFileTo(path string, out io.Writer) error {
 	result, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("read combo file: %w", err)
@@ -117,6 +117,13 @@ func ReadComboFile(path string, out io.Writer) error {
 		_, _ = fmt.Fprintf(out, "%s: %v\n", e.Name(), e)
 	}
 	return nil
+}
+
+// ReadComboFile parses an uncompressed combo file and prints its entries to stdout.
+//
+// Deprecated: use ReadComboFileTo to control the output destination.
+func ReadComboFile(path string) error {
+	return ReadComboFileTo(path, os.Stdout)
 }
 
 // WriteComboFile serializes entries to path using the selected mode.
@@ -169,10 +176,9 @@ func (w *ComboWriter) writeEntry(entry types.Entry) {
 	switch entry := entry.(type) {
 	case *types.DownlinkEntry:
 		w.writeType(w.downlinkType())
-		sortedBands := make([]types.Band, len(entry.Bands()))
-		copy(sortedBands, entry.Bands())
-		types.SortBandsAsc(sortedBands)
-		w.writeBands(sortedBands)
+		bands := make([]types.Band, len(entry.Bands()))
+		copy(bands, entry.Bands())
+		w.writeBands(bands)
 
 	case *types.UplinkEntry:
 		w.writeType(w.uplinkType())
