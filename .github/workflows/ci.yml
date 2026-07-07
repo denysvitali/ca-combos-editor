@@ -30,17 +30,25 @@ jobs:
           cache: true
 
       - name: Download and verify modules
+        env:
+          GOTOOLCHAIN: auto
         run: |
           go mod download
           go mod verify
 
       - name: Build
+        env:
+          GOTOOLCHAIN: auto
         run: go build ./...
 
       - name: Run go vet
+        env:
+          GOTOOLCHAIN: auto
         run: go vet ./...
 
       - name: Run tests
+        env:
+          GOTOOLCHAIN: auto
         run: go test ./...
 
   format:
