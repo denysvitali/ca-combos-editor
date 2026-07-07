@@ -119,14 +119,18 @@ func ReadComboFile(path string) error {
 }
 
 // WriteComboFile serializes entries to path using the selected mode.
-func WriteComboFile(entries []types.Entry, mode ComboWriterMode, path string) error {
+func WriteComboFile(entries []types.Entry, mode ComboWriterMode, path string) (err error) {
 	w := ComboWriter{Mode: mode}
 
 	f, err := os.Create(path)
 	if err != nil {
 		return fmt.Errorf("unable to open file %q for writing: %w", path, err)
 	}
-	defer f.Close()
+	defer func() {
+		if cerr := f.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("close file %q: %w", path, cerr)
+		}
+	}()
 
 	if _, err := io.Copy(f, bytes.NewReader(w.Write(entries))); err != nil {
 		return fmt.Errorf("unable to write file %q: %w", path, err)

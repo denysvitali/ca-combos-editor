@@ -99,6 +99,3 @@ func (r *ComboReader) Remaining() string {
 	rest, _ := io.ReadAll(r.reader)
 	return string(rest)
 }
-
-// TODO: remove after confirming no callers remain.
-func (r *ComboReader) skipOrFailGracefully(expectedRune rune) {}

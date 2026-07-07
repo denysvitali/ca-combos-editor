@@ -80,20 +80,26 @@ func parseComboText(comboString string) ([]types.Entry, error) {
 
 // ParseBandDLULFile creates combo entries from separate downlink and uplink
 // description files.
-func ParseBandDLULFile(downlink string, uplink string) ([]types.Entry, error) {
+func ParseBandDLULFile(downlink string, uplink string) (finalEntries []types.Entry, err error) {
 	dlFile, err := os.Open(downlink)
 	if err != nil {
 		return nil, fmt.Errorf("open downlink file: %w", err)
 	}
-	defer dlFile.Close()
+	defer func() {
+		if cerr := dlFile.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("close downlink file: %w", cerr)
+		}
+	}()
 
 	ulFile, err := os.Open(uplink)
 	if err != nil {
 		return nil, fmt.Errorf("open uplink file: %w", err)
 	}
-	defer ulFile.Close()
-
-	var finalEntries []types.Entry
+	defer func() {
+		if cerr := ulFile.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("close uplink file: %w", cerr)
+		}
+	}()
 
 	dlScanner := bufio.NewScanner(dlFile)
 	ulScanner := bufio.NewScanner(ulFile)
@@ -168,14 +174,17 @@ func parseSingleBand(text string) (types.Band, error) {
 }
 
 // ParseBandFile parses a bands.txt-style file into a sorted list of entries.
-func ParseBandFile(path string) ([]types.Entry, error) {
+func ParseBandFile(path string) (finalEntries []types.Entry, err error) {
 	comboFile, err := os.Open(path)
 	if err != nil {
 		return nil, fmt.Errorf("open band file: %w", err)
 	}
-	defer comboFile.Close()
+	defer func() {
+		if cerr := comboFile.Close(); cerr != nil && err == nil {
+			err = fmt.Errorf("close band file: %w", cerr)
+		}
+	}()
 
-	var finalEntries []types.Entry
 	finalEntriesHM := make(map[string][]types.Entry)
 
 	scanner := bufio.NewScanner(comboFile)
