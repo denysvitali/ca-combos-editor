@@ -100,8 +100,8 @@ func (w *ComboWriter) Write(entries []types.Entry) []byte {
 	return output
 }
 
-// ReadComboFile parses an uncompressed combo file and prints its entries.
-func ReadComboFile(path string) error {
+// ReadComboFile parses an uncompressed combo file and writes its entries to out.
+func ReadComboFile(path string, out io.Writer) error {
 	result, err := os.ReadFile(path)
 	if err != nil {
 		return fmt.Errorf("read combo file: %w", err)
@@ -114,7 +114,7 @@ func ReadComboFile(path string) error {
 	}
 
 	for _, e := range cf.Entries {
-		fmt.Printf("%s: %v\n", e.Name(), e)
+		_, _ = fmt.Fprintf(out, "%s: %v\n", e.Name(), e)
 	}
 	return nil
 }

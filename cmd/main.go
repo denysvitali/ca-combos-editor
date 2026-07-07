@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"strings"
@@ -24,6 +25,15 @@ var (
 The tool can parse uncompressed 00028874 payloads and create new payloads from
 human-readable band descriptions.`,
 		SilenceUsage: true,
+		PersistentPreRunE: func(cmd *cobra.Command, args []string) error {
+			if _, err := logrus.ParseLevel(viper.GetString("log_level")); err != nil {
+				return fmt.Errorf("invalid log-level %q", viper.GetString("log_level"))
+			}
+			if _, err := comboWriterMode(viper.GetInt("mode")); err != nil {
+				return err
+			}
+			return nil
+		},
 	}
 
 	createCmd = &cobra.Command{
@@ -63,7 +73,7 @@ func init() {
 	cobra.OnInitialize(initConfig)
 
 	rootCmd.PersistentFlags().StringVarP(&logLevel, "log-level", "l", "error", "Log level (debug, info, warn, error)")
-	rootCmd.PersistentFlags().IntVarP(&mode, "mode", "m", 137, "Writer mode: 137 or 201")
+	rootCmd.PersistentFlags().IntVarP(&mode, "mode", "m", 137, "Writer mode: 137, 201, or 333")
 
 	_ = viper.BindPFlag("log_level", rootCmd.PersistentFlags().Lookup("log-level"))
 	_ = viper.BindPFlag("mode", rootCmd.PersistentFlags().Lookup("mode"))
@@ -81,37 +91,35 @@ func initConfig() {
 	viper.AddConfigPath(".")
 	viper.AddConfigPath("$HOME/.config/ca-combos-editor")
 
-	// Intentionally ignore missing config files.
-	_ = viper.ReadInConfig()
+	if err := viper.ReadInConfig(); err != nil {
+		var notFound viper.ConfigFileNotFoundError
+		if !errors.As(err, &notFound) {
+			pkg.Log.WithError(err).Warn("failed to read config file")
+		}
+	}
 
 	configureLogger()
 }
 
 func configureLogger() {
-	lvl := strings.ToLower(viper.GetString("log_level"))
-	switch lvl {
-	case "debug":
-		pkg.Log.Level = logrus.DebugLevel
-	case "info":
-		pkg.Log.Level = logrus.InfoLevel
-	case "warn", "warning":
-		pkg.Log.Level = logrus.WarnLevel
-	case "error", "err":
-		pkg.Log.Level = logrus.ErrorLevel
-	default:
-		pkg.Log.Level = logrus.ErrorLevel
+	lvl, err := logrus.ParseLevel(viper.GetString("log_level"))
+	if err != nil {
+		pkg.Log.WithError(err).Warn("invalid log level, defaulting to error")
+		lvl = logrus.ErrorLevel
 	}
+	pkg.Log.SetLevel(lvl)
 }
 
-func writerMode() pkg.ComboWriterMode {
-	m := viper.GetInt("mode")
-	switch m {
+func comboWriterMode(mode int) (pkg.ComboWriterMode, error) {
+	switch mode {
 	case 137:
-		return pkg.COMBOWRITER_137_138
+		return pkg.COMBOWRITER_137_138, nil
 	case 201:
-		return pkg.COMBOWRITER_201_202
+		return pkg.COMBOWRITER_201_202, nil
+	case 333:
+		return pkg.COMBOWRITER_333_334, nil
 	default:
-		return pkg.COMBOWRITER_137_138
+		return 0, fmt.Errorf("invalid mode %d: must be 137, 201, or 333", mode)
 	}
 }
 
@@ -120,14 +128,19 @@ func runCreate(cmd *cobra.Command, args []string) error {
 
 	entries, err := pkg.ParseBandFile(input)
 	if err != nil {
+		return fmt.Errorf("parse band file %q: %w", input, err)
+	}
+
+	mode, err := comboWriterMode(viper.GetInt("mode"))
+	if err != nil {
 		return err
 	}
 
-	if err := pkg.WriteComboFile(entries, writerMode(), output); err != nil {
-		return err
+	if err := pkg.WriteComboFile(entries, mode, output); err != nil {
+		return fmt.Errorf("write combo file %q: %w", output, err)
 	}
 
-	fmt.Println(styleSuccess.Render(fmt.Sprintf("✓ wrote %s", output)))
+	_, _ = fmt.Fprintln(cmd.OutOrStdout(), styleSuccess.Render(fmt.Sprintf("✓ wrote %s", output)))
 	return nil
 }
 
@@ -136,32 +149,34 @@ func runCreateDlUl(cmd *cobra.Command, args []string) error {
 
 	entries, err := pkg.ParseBandDLULFile(downlink, uplink)
 	if err != nil {
-		return err
+		return fmt.Errorf("parse DL/UL band files: %w", err)
 	}
 
 	for _, e := range entries {
-		if e.Name() == "DL" {
-			pkg.Log.Debugf("\n")
-		}
-		pkg.Log.Debugf("%s: %s\n", e.Name(), e)
+		pkg.Log.Debugf("%s: %s", e.Name(), e)
 	}
 
-	if err := pkg.WriteComboFile(entries, writerMode(), output); err != nil {
+	mode, err := comboWriterMode(viper.GetInt("mode"))
+	if err != nil {
 		return err
 	}
 
-	fmt.Println(styleSuccess.Render(fmt.Sprintf("✓ wrote %s", output)))
+	if err := pkg.WriteComboFile(entries, mode, output); err != nil {
+		return fmt.Errorf("write combo file %q: %w", output, err)
+	}
+
+	_, _ = fmt.Fprintln(cmd.OutOrStdout(), styleSuccess.Render(fmt.Sprintf("✓ wrote %s", output)))
 	return nil
 }
 
 func runParse(cmd *cobra.Command, args []string) error {
 	input := args[0]
 
-	fmt.Println(styleHeader.Render("Carrier Aggregation Combos"))
-	fmt.Println()
+	_, _ = fmt.Fprintln(cmd.OutOrStdout(), styleHeader.Render("Carrier Aggregation Combos"))
+	_, _ = fmt.Fprintln(cmd.OutOrStdout())
 
-	if err := pkg.ReadComboFile(input); err != nil {
-		return err
+	if err := pkg.ReadComboFile(input, cmd.OutOrStdout()); err != nil {
+		return fmt.Errorf("read combo file %q: %w", input, err)
 	}
 	return nil
 }

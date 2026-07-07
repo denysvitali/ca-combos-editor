@@ -1,7 +1,6 @@
 package main
 
 import (
-	"bytes"
 	"os"
 	"path/filepath"
 	"strings"
@@ -20,29 +19,15 @@ func resetRootCmd(t *testing.T) {
 	require.NoError(t, rootCmd.PersistentFlags().Set("mode", "137"))
 }
 
-func captureStdout(t *testing.T, fn func()) string {
-	t.Helper()
-	old := os.Stdout
-	r, w, err := os.Pipe()
-	require.NoError(t, err)
-	os.Stdout = w
-	defer func() { os.Stdout = old }()
-	fn()
-	require.NoError(t, w.Close())
-	var buf bytes.Buffer
-	_, err = buf.ReadFrom(r)
-	require.NoError(t, err)
-	return buf.String()
-}
-
 func execute(t *testing.T, args ...string) string {
 	t.Helper()
 	resetRootCmd(t)
 	rootCmd.SetArgs(args)
-	out := captureStdout(t, func() {
-		require.NoError(t, rootCmd.Execute())
-	})
-	return out
+	var out strings.Builder
+	rootCmd.SetOut(&out)
+	rootCmd.SetErr(&out)
+	require.NoError(t, rootCmd.Execute())
+	return out.String()
 }
 
 func executeExpectErr(t *testing.T, args ...string) string {
@@ -160,6 +145,14 @@ func TestRootCommandInvalidArgs(t *testing.T) {
 		{
 			name: "missing required input file for create",
 			args: []string{"create", "does-not-exist.txt", filepath.Join(t.TempDir(), "out")},
+		},
+		{
+			name: "invalid mode",
+			args: []string{"--mode", "999", "parse", "../test/resources/2019-10-17/extracted"},
+		},
+		{
+			name: "invalid log-level",
+			args: []string{"--log-level", "invalid", "parse", "../test/resources/2019-10-17/extracted"},
 		},
 	}
 
