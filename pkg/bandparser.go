@@ -68,6 +68,9 @@ func parseComboText(comboString string) ([]types.Entry, error) {
 	}
 
 	entries = append(entries, &dl)
+	types.SortBandsDesc(dl.BandArr)
+	types.SortBandsDesc(ul.BandArr)
+
 	entries = append(entries, &ul)
 
 	if len(ul.Bands()) > 1 {

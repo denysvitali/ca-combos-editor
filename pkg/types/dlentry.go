@@ -1,10 +1,6 @@
 package types
 
-import (
-	"cmp"
-	"slices"
-	"strings"
-)
+import "strings"
 
 // DownlinkEntry is a downlink carrier aggregation combo record.
 type DownlinkEntry struct {
@@ -24,19 +20,7 @@ func (d *DownlinkEntry) Bands() []Band {
 // String formats the combo as a dash-separated list of bands sorted from
 // highest to lowest band number, then from highest to lowest class.
 func (d *DownlinkEntry) String() string {
-	slices.SortFunc(d.BandArr, func(a, b Band) int {
-		if a.Band != b.Band {
-			return cmp.Compare(b.Band, a.Band)
-		}
-		return cmp.Compare(b.Class, a.Class)
-	})
-	var bands []string
-
-	for _, b := range d.BandArr {
-		bands = append(bands, b.String())
-	}
-
-	return strings.Join(bands, "-")
+	return joinBands(d.BandArr)
 }
 
 // SetBands replaces the bands for this combo.
@@ -46,3 +30,19 @@ func (d *DownlinkEntry) SetBands(bands []Band) {
 
 // DlArr is a slice of downlink entries.
 type DlArr []DownlinkEntry
+
+// joinBands formats bands as a dash-separated string in descending order.
+func joinBands(bands []Band) string {
+	if len(bands) == 0 {
+		return ""
+	}
+	sorted := make([]Band, len(bands))
+	copy(sorted, bands)
+	SortBandsDesc(sorted)
+
+	parts := make([]string, len(sorted))
+	for i, b := range sorted {
+		parts[i] = b.String()
+	}
+	return strings.Join(parts, "-")
+}

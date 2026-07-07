@@ -171,7 +171,7 @@ The files under `test/resources/` show the following consistent patterns:
 
 The tool supports two input formats: a single `bands.txt` file and a split `downlink.txt`/`uplink.txt` pair.
 
-#### 8.1 Single bands.txt format
+#### 9.1 Single bands.txt format
 
 One combo per line. A line consists of a downlink combo followed by an optional uplink combo. The syntax for a single component is:
 
@@ -187,15 +187,15 @@ Examples:
 
 The optional uplink class is the second class letter after the MIMO count. If the MIMO count is omitted, it defaults to 1.
 
-#### 8.2 Split downlink.txt / uplink.txt format
+#### 9.2 Split downlink.txt / uplink.txt format
 
 `downlink.txt` contains one downlink combo per line. `uplink.txt` contains a comma-separated list of uplink combos per line, with one line per downlink line. Uplink lists are sorted by the first band number before being written to the binary file.
 
-### 9. Safety Notes
+### 10. Safety Notes
 
 This file is read by the modem at boot. An invalid 00028874 can cause the modem to reject the NV item, fail to register, or bootloop. Always keep a backup of the original file and monitor `dmesg` for modem failures when testing a modified file.
 
-### 10. Planned CLI `compress` / `decompress` Commands
+### 11. Planned CLI `compress` / `decompress` Commands
 
 The Go package `pkg/zlib` already provides `Compress` and `Decompress` helpers that use zlib level 6. The shell scripts `compress.sh` and `uncompress.sh` wrap `zlib-flate` for the same operations. A native CLI interface is planned so the tool can manage the zlib wrapper directly:
 

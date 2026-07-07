@@ -172,7 +172,7 @@ func (w *ComboWriter) writeEntry(entry types.Entry) {
 		w.writeType(w.downlinkType())
 		sortedBands := make([]types.Band, len(entry.Bands()))
 		copy(sortedBands, entry.Bands())
-		sort.Sort(sort.Reverse(types.BandArr(sortedBands)))
+		types.SortBandsAsc(sortedBands)
 		w.writeBands(sortedBands)
 
 	case *types.UplinkEntry:

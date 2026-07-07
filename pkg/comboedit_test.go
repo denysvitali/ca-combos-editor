@@ -143,10 +143,10 @@ func normalizeEntries(entries []types.Entry) []types.Entry {
 	normalized := make([]types.Entry, len(entries))
 	for i, e := range entries {
 		switch e := e.(type) {
-		case *types.DownlinkEntry:
+		(case *types.DownlinkEntry:
 			bands := make([]types.Band, len(e.Bands()))
 			copy(bands, e.Bands())
-			sort.Sort(sort.Reverse(types.BandArr(bands)))
+			types.SortBandsAsc(bands)
 			normalized[i] = &types.DownlinkEntry{BandArr: bands}
 		case *types.UplinkEntry:
 			bands := make([]types.Band, len(e.Bands()))

@@ -1,8 +1,7 @@
 package types
 
 import (
-	"cmp"
-	"slices"
+	"sort"
 	"strings"
 )
 
@@ -24,19 +23,7 @@ func (u *UplinkEntry) Name() string {
 // String formats the combo as a dash-separated list of bands sorted from
 // highest to lowest band number, then from highest to lowest class.
 func (u *UplinkEntry) String() string {
-	slices.SortFunc(u.BandArr, func(a, b Band) int {
-		if a.Band != b.Band {
-			return cmp.Compare(b.Band, a.Band)
-		}
-		return cmp.Compare(b.Class, a.Class)
-	})
-	var bands []string
-
-	for _, b := range u.BandArr {
-		bands = append(bands, b.String())
-	}
-
-	return strings.Join(bands, "-")
+	return joinBands(u.BandArr)
 }
 
 // SetBands replaces the bands for this combo.
